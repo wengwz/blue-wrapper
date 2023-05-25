@@ -11,9 +11,9 @@ import cocotb_test.simulator
 
 from cocotbext.axi import AxiStreamBus, AxiStreamSource, AxiStreamSink, AxiStreamFrame
 
-CASES_NUM = 2000
+CASES_NUM = 3000
 CASE_MAX_SIZE = 512
-PAUSE_RATE = 0.5
+PAUSE_RATE = 0.4
 PAYLOAD_MAX = 128
 
 class AxiStreamFifoTester:

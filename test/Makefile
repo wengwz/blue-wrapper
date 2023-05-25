@@ -4,8 +4,8 @@ SRCDIR = ../src
 VLOGDIR = generated
 LIST_VLOG = ../scripts/listVlogFiles.tcl
 
-TOP = mkAxiStreamFifo256
-FILE = AxiStreamFifo.bsv
+TOP = mkAxi4Fifo256
+FILE = AxiTestFifo.bsv
 
 
 TRANSFLAGS = -aggressive-conditions # -lift -split-if
@@ -41,7 +41,7 @@ verilog:
 	bluetcl $(LIST_VLOG) -bdir $(BUILDDIR) -vdir $(BUILDDIR) $(TOP) $(TOP) | grep -i '\.v' | xargs -I {} cp {} $(VLOGDIR)
 
 clean:
-	rm -rf $(BUILDDIR) $(VLOGDIR) __pycache__
+	rm -rf $(BUILDDIR) $(VLOGDIR) __pycache__ *.vcd
 
 .PHONY: compile link clean
 .DEFAULT_GOAL := verilog
