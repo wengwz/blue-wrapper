@@ -1,5 +1,7 @@
 import FIFOF :: *;
 import PAClib :: *;
+import Connectable :: *;
+import GetPut :: *;
 
 import AxiStreamTypes :: *;
 import Axi4Types :: *;
@@ -23,11 +25,29 @@ module mkAxiStreamFifo#(Integer depth)(AxiStreamFifo#(keepWidth, usrWidth));
 endmodule
 
 (* synthesize *)
-module mkAxiStreamFifo256(AxiStreamFifo#(256, 1));
-    AxiStreamFifo#(256, 1) ifc <- mkAxiStreamFifo(16);
+module mkAxiStreamFifo256(AxiStreamFifo#(32, 1));
+    AxiStreamFifo#(32, 1) ifc <- mkAxiStreamFifo(16);
     return ifc;
 endmodule
 
+
+module mkGetPutAxiStreamFifo(AxiStreamFifo#(keepWidth, usrWidth));
+    FIFOF#(AxiStream#(keepWidth, usrWidth)) fifo <- mkFIFOF;
+    RawAxiStreamSlaveToGet#(keepWidth, usrWidth) slaveConvert <- mkRawAxiStreamSlaveToGet;
+    PutToRawAxiStreamMaster#(keepWidth, usrWidth) masterConvert <- mkPutToRawAxiStreamMaster;
+
+
+    mkConnection(slaveConvert.getOut, toPut(fifo));
+    mkConnection(toGet(fifo), masterConvert.putIn);
+    interface fifoIn = slaveConvert.rawAxiIn;
+    interface fifoOut = masterConvert.rawAxiOut;
+endmodule
+
+(* synthesize *)
+module mkGetPutAxiStreamFifo256(AxiStreamFifo#(32, 1));
+    AxiStreamFifo#(32, 1) ifc <- mkGetPutAxiStreamFifo;
+    return ifc;
+endmodule
 
 interface Axi4LiteFifo#(numeric type addrWidth, numeric type strbWidth);
     (* prefix = "s_axi" *) interface RawAxi4LiteSlave#(addrWidth, strbWidth) fifoIn;

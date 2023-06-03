@@ -1,5 +1,6 @@
 import FIFOF :: *;
 import PAClib :: *;
+import GetPut :: *;
 
 import BusConversion :: *;
 import AxiDefines :: *;
@@ -78,6 +79,7 @@ module mkPipeOutToRawAxiStreamMaster#(
     endmethod
 endmodule
 
+
 interface RawAxiStreamSlaveToPipeOut#(numeric type keepWidth, numeric type usrWidth);
     interface RawAxiStreamSlave#(keepWidth, usrWidth) rawAxiStream;
     interface PipeOut#(AxiStream#(keepWidth, usrWidth)) pipeOut;
@@ -108,56 +110,55 @@ module mkRawAxiStreamSlaveToPipeOut(RawAxiStreamSlaveToPipeOut#(keepWidth, usrWi
     endinterface;
 endmodule
 
+interface PutToRawAxiStreamMaster#(numeric type keepWidth, numeric type usrWidth);
+    interface Put#(AxiStream#(keepWidth, usrWidth)) putIn;
+    interface RawAxiStreamMaster#(keepWidth, usrWidth) rawAxiOut;
+endinterface
 
-// module mkAxiStreamMasterXactor#(
-//     PipeOut#(AxiStream#(keepWidth, usrWidth)) axiStreamTlm
-//     )(AxiStreamMaster#(keepWidth, usrWidth));
+module mkPutToRawAxiStreamMaster(PutToRawAxiStreamMaster#(keepWidth, usrWidth));
+    PutToRawBusMaster#(AxiStream#(keepWidth, usrWidth)) busConverter <- mkPutToRawBusMaster;
 
-//     Bool unguarded = True;
-//     Bool guarded = False;
-//     FIFOF#(AxiStream#(keepWidth, usrWidth)) buffer <- mkGFIFOF(guarded, unguarded);
-//     let bufPipeOut <- mkFIFOF_to_Pipe(buffer, axiStreamTlm);
+    interface putIn = busConverter.putIn;
+    interface rawAxiOut = interface RawAxiStreamMaster;
+        method Bool tValid = busConverter.rawBusOut.valid;
+        method Bit#(TMul#(keepWidth, BYTE_WIDTH)) tData = busConverter.rawBusOut.data.tData;
+        method Bit#(keepWidth) tKeep = busConverter.rawBusOut.data.tKeep;
+        method Bool tLast = busConverter.rawBusOut.data.tLast;
+        method Bit#(usrWidth) tUser = busConverter.rawBusOut.data.tUser;
+        method Action tReady(Bool rdy);
+            busConverter.rawBusOut.ready(rdy);
+        endmethod
+    endinterface;
+endmodule
 
+interface RawAxiStreamSlaveToGet#(numeric type keepWidth, numeric type usrWidth);
+    interface RawAxiStreamSlave#(keepWidth, usrWidth) rawAxiIn;
+    interface Get#(AxiStream#(keepWidth, usrWidth)) getOut;
+endinterface
 
-//     method Bool tValid = bufPipeOut.notEmpty;
-//     method Bit#(TMul#(keepWidth, 8)) tData = bufPipeOut.first.tData;
-//     method Bit#(keepWidth) tKeep = bufPipeOut.first.tKeep;
-//     method Bool tLast = bufPipeOut.first.tLast;
-//     method Bit#(usrWidth) tUser= bufPipeOut.first.tUser;
-//     method Action tReady(Bool ready);
-//         if (ready && bufPipeOut.notEmpty) begin
-//             bufPipeOut.deq;
-//         end
-//     endmethod
+module mkRawAxiStreamSlaveToGet(RawAxiStreamSlaveToGet#(keepWidth, usrWidth));
+    RawBusSlaveToGet#(AxiStream#(keepWidth, usrWidth)) busConverter <- mkRawBusSlaveToGet;
 
-// endmodule
+    interface rawAxiIn = interface RawAxiStreamSlave;
+        method Bool tReady = busConverter.rawBusIn.ready;
+            
+        method Action tValid(
+            Bool valid, 
+            Bit#(TMul#(keepWidth, BYTE_WIDTH)) tData, 
+            Bit#(keepWidth) tKeep, 
+            Bool tLast, 
+            Bit#(usrWidth) tUser
+        );
+            AxiStream#(keepWidth, usrWidth) axiStream = AxiStream {
+                tData: tData,
+                tKeep: tKeep,
+                tLast: tLast,
+                tUser: tUser
+            };
+            busConverter.rawBusIn.validData(valid, axiStream);
+        endmethod
+    endinterface;
 
-// interface AxiStreamSlaveXactor#(numeric type keepWidth, numeric type usrWidth);
-//     interface AxiStreamSlave#(keepWidth, usrWidth) axiStreamRaw;
-//     interface PipeOut#(AxiStream#(keepWidth, usrWidth)) axiStreamTlm;
-// endinterface
+    interface getOut = busConverter.getOut;
+endmodule
 
-
-// module mkAxiStreamSlaveXactor(AxiStreamSlaveXactor#(keepWidth, usrWidth));
-//     Bool guarded = False;
-//     Bool unguarded = True;
-
-//     FIFOF#(AxiStream#(keepWidth, usrWidth)) buffer <- mkGFIFOF(unguarded, guarded);
-//     interface axiStreamRaw = interface AxiStreamSlave;
-//         method Bool tReady = buffer.notFull;
-//         method Action tValid (Bool valid, Bit#(TMul#(keepWidth, 8)) tData, Bit#(keepWidth) tKeep, Bool tLast, Bit#(usrWidth) tUser);
-//             if (valid && buffer.notFull) begin
-//                 buffer.enq(
-//                     AxiStream {
-//                         tData: tData,
-//                         tKeep: tKeep,
-//                         tLast: tLast,
-//                         tUser: tUser
-//                     }
-//                 );
-//             end
-//         endmethod
-//     endinterface;
-
-//     interface axiStreamTlm = f_FIFOF_to_PipeOut(buffer);
-// endmodule
