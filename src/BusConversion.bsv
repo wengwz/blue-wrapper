@@ -39,6 +39,35 @@ module mkPipeOutToRawBusMaster#(PipeOut#(dType) pipeIn)(RawBusMaster#(dType)) pr
 
 endmodule
 
+interface RawBusSlaveToPipeOut#(type dType);
+    interface RawBusSlave#(dType) rawBus;
+    interface PipeOut#(dType) pipeOut;
+endinterface
+
+module mkRawBusSlaveToPipeOut(RawBusSlaveToPipeOut#(dType)) provisos(Bits#(dType, dSz));
+    Wire#(Bool) validW <- mkBypassWire;
+    Wire#(dType) dataW <- mkBypassWire;
+    PulseWire readyW <- mkPulseWire;
+
+    interface RawBusSlave rawBus;
+        method Bool ready = readyW;
+        
+        method Action validData (Bool valid, dType data);
+            validW <= valid;
+            dataW <= data;
+        endmethod
+    endinterface
+
+    interface PipeOut pipeOut;
+        method Bool notEmpty = validW;
+        method dType first if (validW);
+            return dataW;
+        endmethod
+        method Action deq if (validW);
+            readyW.send;
+        endmethod
+    endinterface
+endmodule
 
 // module mkPipeOutToRawBusMasterPipeline#(PipeOut#(dType) pipeIn)(RawBusMaster#(dType)) provisos(Bits#(dType, dSz));
 //     Bool unguarded = True;
@@ -79,43 +108,31 @@ endmodule
 // endmodule
 
 
-interface RawBusSlaveToPipeOut#(type dType);
-    interface RawBusSlave#(dType) rawBus;
-    interface PipeOut#(dType) pipeOut;
-endinterface
-
-module mkRawBusSlaveToPipeOut(RawBusSlaveToPipeOut#(dType)) provisos(Bits#(dType, dSz));
-    Wire#(Bool) validW <- mkBypassWire;
-    Wire#(dType) dataW <- mkBypassWire;
-    PulseWire readyW <- mkPulseWire;
-
-    interface RawBusSlave rawBus;
-        method Bool ready = readyW;
-        
-        method Action validData (Bool valid, dType data);
-            validW <= valid;
-            dataW <= data;
-        endmethod
-    endinterface
-
-    interface PipeOut pipeOut;
-        method Bool notEmpty = validW;
-        method dType first if (validW);
-            return dataW;
-        endmethod
-        method Action deq if (validW);
-            readyW.send;
-        endmethod
-    endinterface
-endmodule
-
-
 interface PutToRawBusMaster#(type dType);
     interface Put#(dType) putIn;
     interface RawBusMaster#(dType) rawBusOut;
 endinterface
 
 module mkPutToRawBusMaster(PutToRawBusMaster#(dType)) provisos(Bits#(dType, dSz));
+    Bool unguarded = True;
+    Bool guarded = False;
+    FIFOF#(dType) buffer <- mkGFIFOF(guarded, unguarded);
+    
+    interface RawBusMaster rawBusOut;
+        method Bool valid = buffer.notEmpty;
+        method dType data = buffer.first;
+        method Action ready(Bool rdy);
+            if (rdy && buffer.notEmpty) begin
+                buffer.deq;
+            end
+        endmethod
+    endinterface
+
+    interface Put putIn = toPut(buffer);
+endmodule
+
+// Cause deadLock if slaver set ready after master set valid
+module mkPutToRawBusMasterDirect(PutToRawBusMaster#(dType)) provisos(Bits#(dType, dSz));
     Wire#(Bool) readyW <- mkBypassWire;
     RWire#(dType) validData <- mkRWire;
 
@@ -159,23 +176,4 @@ module mkRawBusSlaveToGet(RawBusSlaveToGet#(dType)) provisos(Bits#(dType, dSz));
             return dataW;
         endmethod
     endinterface;
-    
 endmodule
-
-
-// module mkGetToAxiStreamMaster#(Get#(dType) getOut)(RawBusMaster#(dType)) provisos(Bits(dType, dSz));
-
-//     interface putIn = interface Put;
-//         method Action put(dType data) if (readyW);
-//             validData.wset(data);
-//         endmethod
-//     endinterface;
-
-
-//     method Bool valid = isValid(validData.wget);
-//     method dType data = fromMaybe(?, validData.wget);
-//     method Action ready(Bool rdy);
-//         readyW <= rdy;
-//     endmethod
-
-// endmodule

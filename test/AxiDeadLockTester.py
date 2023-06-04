@@ -124,7 +124,7 @@ async def runAxiStreamFifoTester(dut):
 def testAxiStreamFifo():
 
     # set parameters used to run tests
-    toplevel = "mkAxiStreamFifo256"
+    toplevel = "mkGetPutAxiStreamFifo256"
     module = os.path.splitext(os.path.basename(__file__))[0]
     test_dir = os.path.abspath(os.path.dirname(__file__))
     sim_build = os.path.join(test_dir, "build")
