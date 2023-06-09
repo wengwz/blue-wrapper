@@ -1,5 +1,5 @@
-import PAClib :: *;
 
+import SemiFifo :: *;
 import BusConversion :: *;
 import AxiDefines :: *;
 
@@ -58,13 +58,12 @@ typedef struct {
 
 
 (* always_ready, always_enabled *)
-interface RawAxi4Master#(
+interface RawAxi4WrMaster#(
     numeric type idWidth,
     numeric type addrWidth,
     numeric type strbWidth,
     numeric type usrWidth
     );
-
    // Wr Addr channel
    (* result = "awvalid"*) method Bool                   awValid; // out
    (* result = "awid"   *) method Bit#(idWidth)          awId;    // out
@@ -97,7 +96,15 @@ interface RawAxi4Master#(
         (* port = "buser"  *) Bit#(usrWidth)        bUser   // in
     );
    (* result = "bready" *) method Bool bReady; // out
+endinterface
 
+(* always_ready, always_enabled *)
+interface RawAxi4RdMaster#(
+    numeric type idWidth,
+    numeric type addrWidth,
+    numeric type strbWidth,
+    numeric type usrWidth
+    );
    // Rd Addr channel
    (* result = "arvalid"*) method Bool                   arValid; // out
    (* result = "arid"   *) method Bit#(idWidth)          arId;    // out
@@ -125,14 +132,25 @@ interface RawAxi4Master#(
    (* result = "rready" *) method Bool rReady; // out
 endinterface
 
+interface RawAxi4Master#(
+    numeric type idWidth,
+    numeric type addrWidth,
+    numeric type strbWidth,
+    numeric type usrWidth
+);
+    (* prefix = "" *)
+    interface RawAxi4WrMaster#(idWidth, addrWidth, strbWidth, usrWidth) wrMaster;
+    (* prefix = "" *)
+    interface RawAxi4RdMaster#(idWidth, addrWidth, strbWidth, usrWidth) rdMaster;
+endinterface
+
 (* always_ready, always_enabled *)
-interface RawAxi4Slave#(
+interface RawAxi4WrSlave#(
     numeric type idWidth,
     numeric type addrWidth,
     numeric type strbWidth,
     numeric type usrWidth
     );
-
    // Wr Addr channel
    (* prefix = "" *)
    method Action awValidData(
@@ -168,7 +186,15 @@ interface RawAxi4Slave#(
    (* result = "bresp"  *) method Bit#(AXI4_RESP_WIDTH) bResp;  // out
    (* result = "buser"  *) method Bit#(usrWidth)        bUser;  // out
    (* prefix = "" *) method Action bReady((* port = "bready" *) Bool rdy); // in
+endinterface
 
+(* always_ready, always_enabled *)
+interface RawAxi4RdSlave#(
+    numeric type idWidth,
+    numeric type addrWidth,
+    numeric type strbWidth,
+    numeric type usrWidth
+    );
    // Rd Addr channel
    (* prefix = "" *)
    method Action arValidData(
@@ -196,248 +222,271 @@ interface RawAxi4Slave#(
    (* prefix = "" *) method Action rReady((* port = "rready" *) Bool rdy);// in
 endinterface
 
-
-interface PipeOutToRawAxi4Master#(
+interface RawAxi4Slave#(
     numeric type idWidth,
     numeric type addrWidth,
     numeric type strbWidth,
     numeric type usrWidth
 );
-    interface PipeOut#(Axi4WrResp#(idWidth, usrWidth))            axiWrResp;
-    interface PipeOut#(Axi4RdData#(idWidth, strbWidth, usrWidth)) axiRdData;
-
-    interface RawAxi4Master#(idWidth, addrWidth, strbWidth, usrWidth) rawAxiMaster;
+    (* prefix = "" *)
+    interface RawAxi4WrSlave#(idWidth, addrWidth, strbWidth, usrWidth) wrSlave;
+    (* prefix = "" *)
+    interface RawAxi4RdSlave#(idWidth, addrWidth, strbWidth, usrWidth) rdSlave;
 endinterface
 
-module mkPipeOutToRawAxi4Master#(
-    PipeOut#(Axi4WrAddr#(idWidth, addrWidth, usrWidth)) axiWrAddr,
-    PipeOut#(Axi4WrData#(idWidth, strbWidth, usrWidth)) axiWrData,
-    PipeOut#(Axi4RdAddr#(idWidth, addrWidth, usrWidth)) axiRdAddr
-)(PipeOutToRawAxi4Master#(idWidth, addrWidth, strbWidth, usrWidth));
 
-    // Wr Channel
-    RawBusMaster#(Axi4WrAddr#(idWidth, addrWidth, usrWidth)) rawAxiWrAddr <- mkPipeOutToRawBusMaster(axiWrAddr);
-    RawBusMaster#(Axi4WrData#(idWidth, strbWidth, usrWidth)) rawAxiWrData <- mkPipeOutToRawBusMaster(axiWrData);
-    RawBusSlaveToPipeOut#(Axi4WrResp#(idWidth, usrWidth)) axiWrRespConvert <- mkRawBusSlaveToPipeOut;
-    
-    // Rd Channel
-    RawBusMaster#(Axi4RdAddr#(idWidth, addrWidth, usrWidth)) rawAxiRdAddr <- mkPipeOutToRawBusMaster(axiRdAddr);
-    RawBusSlaveToPipeOut#(Axi4RdData#(idWidth, strbWidth, usrWidth)) axiRdDataConvert <- mkRawBusSlaveToPipeOut;
-
-    interface axiWrResp = axiWrRespConvert.pipeOut;
-    interface axiRdData = axiRdDataConvert.pipeOut;
-    interface rawAxiMaster = interface RawAxi4Master;
-        // Wr Addr channel
-        method Bool                   awValid = rawAxiWrAddr.valid;
-        method Bit#(idWidth)          awId    = rawAxiWrAddr.data.awId;
-        method Bit#(addrWidth)        awAddr  = rawAxiWrAddr.data.awAddr;
-        method Bit#(AXI4_LEN_WIDTH)   awLen   = rawAxiWrAddr.data.awLen;
-        method Bit#(AXI4_SIZE_WIDTH)  awSize  = rawAxiWrAddr.data.awSize;
-        method Bit#(AXI4_BURST_WIDTH) awBurst = rawAxiWrAddr.data.awBurst;
-        method Bit#(AXI4_LOCK_WIDTH)  awLock  = rawAxiWrAddr.data.awLock;
-        method Bit#(AXI4_CACHE_WIDTH) awCache = rawAxiWrAddr.data.awCache;
-        method Bit#(AXI4_PROT_WIDTH)  awProt  = rawAxiWrAddr.data.awProt;
-        method Bit#(AXI4_QOS_WIDTH)   awQos   = rawAxiWrAddr.data.awQos;
-        method Bit#(usrWidth)         awUser  = rawAxiWrAddr.data.awUser;
-        method Action awReady(Bool rdy);
-            rawAxiWrAddr.ready(rdy);
-        endmethod
-
-        // Wr Data channel
-        method Bool                               wValid = rawAxiWrData.valid;
-        method Bit#(idWidth)                      wId    = rawAxiWrData.data.wId;
-        method Bit#(TMul#(strbWidth, BYTE_WIDTH)) wData  = rawAxiWrData.data.wData;
-        method Bit#(strbWidth)                    wStrb  = rawAxiWrData.data.wStrb;
-        method Bool                               wLast  = rawAxiWrData.data.wLast;
-        method Bit#(usrWidth)                     wUser  = rawAxiWrData.data.wUser;
-        method Action wReady(Bool rdy);
-            rawAxiWrData.ready(rdy);
-        endmethod
-
-        // Wr Response channel
-        method Action bValidData(
-            Bool bValid, 
-            Bit#(idWidth) bId, 
-            Bit#(AXI4_RESP_WIDTH) bResp, 
-            Bit#(usrWidth) bUser
-        );
-            Axi4WrResp#(idWidth, usrWidth) resp = Axi4WrResp {
-                bId: bId,
-                bResp: bResp,
-                bUser: bUser
-            };
-            axiWrRespConvert.rawBus.validData(bValid, resp);
-        endmethod
-        method Bool bReady = axiWrRespConvert.rawBus.ready;
-
-        // Rd Addr channel
-        method Bool                   arValid = rawAxiRdAddr.valid;
-        method Bit#(idWidth)          arId    = rawAxiRdAddr.data.arId;
-        method Bit#(addrWidth)        arAddr  = rawAxiRdAddr.data.arAddr;
-        method Bit#(AXI4_LEN_WIDTH)   arLen   = rawAxiRdAddr.data.arLen;
-        method Bit#(AXI4_SIZE_WIDTH)  arSize  = rawAxiRdAddr.data.arSize;
-        method Bit#(AXI4_BURST_WIDTH) arBurst = rawAxiRdAddr.data.arBurst;
-        method Bit#(AXI4_LOCK_WIDTH)  arLock  = rawAxiRdAddr.data.arLock;
-        method Bit#(AXI4_CACHE_WIDTH) arCache = rawAxiRdAddr.data.arCache;
-        method Bit#(AXI4_PROT_WIDTH)  arProt  = rawAxiRdAddr.data.arProt;
-        method Bit#(AXI4_QOS_WIDTH)   arQos   = rawAxiRdAddr.data.arQos;
-        method Bit#(usrWidth)         arUser  = rawAxiRdAddr.data.arUser;
-        method Action arReady(Bool rdy);
-            rawAxiRdAddr.ready(rdy);
-        endmethod
-
-        method Action rValidData(
-            Bool                               rValid,
-            Bit#(idWidth)                      rId,
-            Bit#(TMul#(strbWidth, BYTE_WIDTH)) rData,
-            Bit#(AXI4_RESP_WIDTH)              rResp,
-            Bool                               rLast,
-            Bit#(usrWidth)                     rUser
-        );
-            Axi4RdData#(idWidth, strbWidth, usrWidth) rdData = Axi4RdData {
-                rId: rId,
-                rData: rData,
-                rResp: rResp,
-                rLast: rLast,
-                rUser: rUser
-            };
-            axiRdDataConvert.rawBus.validData(rValid, rdData);
-        endmethod
-        method Bool rReady = axiRdDataConvert.rawBus.ready;
-    endinterface;
-endmodule
-
-
-interface RawAxi4SlaveToPipeOut#(
-    numeric type idWidth,
-    numeric type addrWidth,
-    numeric type strbWidth,
-    numeric type usrWidth
+function RawAxi4WrMaster#(idWidth, addrWidth, strbWidth, usrWidth) parseRawBusToRawAxi4WrMaster(
+    RawBusMaster#(Axi4WrAddr#(idWidth, addrWidth, usrWidth)) rawWrAddr,
+    RawBusMaster#(Axi4WrData#(idWidth, strbWidth, usrWidth)) rawWrData,
+    RawBusSlave#(Axi4WrResp#(idWidth, usrWidth)) rawWrResp
 );
-    interface PipeOut#(Axi4WrAddr#(idWidth, addrWidth, usrWidth)) axiWrAddr;
-    interface PipeOut#(Axi4WrData#(idWidth, strbWidth, usrWidth)) axiWrData;
-    interface PipeOut#(Axi4RdAddr#(idWidth, addrWidth, usrWidth)) axiRdAddr;
+    return (
+        interface RawAxi4WrMaster;
+            // Wr Addr channel
+            method Bool                   awValid = rawWrAddr.valid;
+            method Bit#(idWidth)          awId    = rawWrAddr.data.awId;
+            method Bit#(addrWidth)        awAddr  = rawWrAddr.data.awAddr;
+            method Bit#(AXI4_LEN_WIDTH)   awLen   = rawWrAddr.data.awLen;
+            method Bit#(AXI4_SIZE_WIDTH)  awSize  = rawWrAddr.data.awSize;
+            method Bit#(AXI4_BURST_WIDTH) awBurst = rawWrAddr.data.awBurst;
+            method Bit#(AXI4_LOCK_WIDTH)  awLock  = rawWrAddr.data.awLock;
+            method Bit#(AXI4_CACHE_WIDTH) awCache = rawWrAddr.data.awCache;
+            method Bit#(AXI4_PROT_WIDTH)  awProt  = rawWrAddr.data.awProt;
+            method Bit#(AXI4_QOS_WIDTH)   awQos   = rawWrAddr.data.awQos;
+            method Bit#(usrWidth)         awUser  = rawWrAddr.data.awUser;
+            method Action awReady(Bool rdy);
+                rawWrAddr.ready(rdy);
+            endmethod
 
-    interface RawAxi4Slave#(idWidth, addrWidth, strbWidth, usrWidth) rawAxiSlave;
-endinterface
+            // Wr Data channel
+            method Bool                               wValid = rawWrData.valid;
+            method Bit#(idWidth)                      wId    = rawWrData.data.wId;
+            method Bit#(TMul#(strbWidth, BYTE_WIDTH)) wData  = rawWrData.data.wData;
+            method Bit#(strbWidth)                    wStrb  = rawWrData.data.wStrb;
+            method Bool                               wLast  = rawWrData.data.wLast;
+            method Bit#(usrWidth)                     wUser  = rawWrData.data.wUser;
+            method Action wReady(Bool rdy);
+                rawWrData.ready(rdy);
+            endmethod
 
-module mkRawAxi4SlaveToPipeOut#(
-    PipeOut#(Axi4WrResp#(idWidth, usrWidth)) axiWrResp,
-    PipeOut#(Axi4RdData#(idWidth, strbWidth, usrWidth)) axiRdData
-)(RawAxi4SlaveToPipeOut#(idWidth, addrWidth, strbWidth, usrWidth));
+            // Wr Response channel
+            method Action bValidData(
+                Bool bValid, 
+                Bit#(idWidth) bId, 
+                Bit#(AXI4_RESP_WIDTH) bResp, 
+                Bit#(usrWidth) bUser
+            );
+                Axi4WrResp#(idWidth, usrWidth) resp = Axi4WrResp {
+                    bId: bId,
+                    bResp: bResp,
+                    bUser: bUser
+                };
+                rawWrResp.validData(bValid, resp);
+            endmethod
+            method Bool bReady = rawWrResp.ready;
+        endinterface
+    );
+endfunction
 
-    // Wr Channel
-    RawBusSlaveToPipeOut#(Axi4WrAddr#(idWidth, addrWidth, usrWidth)) axiWrAddrConvert <- mkRawBusSlaveToPipeOut;
-    RawBusSlaveToPipeOut#(Axi4WrData#(idWidth, strbWidth, usrWidth)) axiWrDataConvert <- mkRawBusSlaveToPipeOut;
-    RawBusMaster#(Axi4WrResp#(idWidth, usrWidth)) rawAxiWrResp <- mkPipeOutToRawBusMaster(axiWrResp);
-    
-    // Rd Channel
-    RawBusSlaveToPipeOut#(Axi4RdAddr#(idWidth, addrWidth, usrWidth)) axiRdAddrConvert <- mkRawBusSlaveToPipeOut;
-    RawBusMaster#(Axi4RdData#(idWidth, strbWidth, usrWidth)) rawAxiRdData <- mkPipeOutToRawBusMaster(axiRdData);
+function RawAxi4RdMaster#(idWidth, addrWidth, strbWidth, usrWidth) parseRawBusToRawAxi4RdMaster(
+    RawBusMaster#(Axi4RdAddr#(idWidth, addrWidth, usrWidth)) rawRdAddr,
+    RawBusSlave#(Axi4RdData#(idWidth, strbWidth, usrWidth)) rawRdData
+);
+    return (
+        interface RawAxi4RdMaster;
+            // Rd Addr channel
+            method Bool                   arValid = rawRdAddr.valid;
+            method Bit#(idWidth)          arId    = rawRdAddr.data.arId;
+            method Bit#(addrWidth)        arAddr  = rawRdAddr.data.arAddr;
+            method Bit#(AXI4_LEN_WIDTH)   arLen   = rawRdAddr.data.arLen;
+            method Bit#(AXI4_SIZE_WIDTH)  arSize  = rawRdAddr.data.arSize;
+            method Bit#(AXI4_BURST_WIDTH) arBurst = rawRdAddr.data.arBurst;
+            method Bit#(AXI4_LOCK_WIDTH)  arLock  = rawRdAddr.data.arLock;
+            method Bit#(AXI4_CACHE_WIDTH) arCache = rawRdAddr.data.arCache;
+            method Bit#(AXI4_PROT_WIDTH)  arProt  = rawRdAddr.data.arProt;
+            method Bit#(AXI4_QOS_WIDTH)   arQos   = rawRdAddr.data.arQos;
+            method Bit#(usrWidth)         arUser  = rawRdAddr.data.arUser;
+            method Action arReady(Bool rdy);
+                rawRdAddr.ready(rdy);
+            endmethod
 
-    interface axiWrAddr = axiWrAddrConvert.pipeOut;
-    interface axiWrData = axiWrDataConvert.pipeOut;
-    interface axiRdAddr = axiRdAddrConvert.pipeOut;
-    
-    interface rawAxiSlave = interface RawAxi4Slave;
-        // Wr Addr channel
-        method Action awValidData(
-            Bool                   awValid,
-            Bit#(idWidth)          awId,
-            Bit#(addrWidth)        awAddr,
-            Bit#(AXI4_LEN_WIDTH)   awLen,
-            Bit#(AXI4_SIZE_WIDTH)  awSize,
-            Bit#(AXI4_BURST_WIDTH) awBurst,
-            Bit#(AXI4_LOCK_WIDTH)  awLock,
-            Bit#(AXI4_CACHE_WIDTH) awCache,
-            Bit#(AXI4_PROT_WIDTH)  awProt,
-            Bit#(AXI4_QOS_WIDTH)   awQos,
-            Bit#(usrWidth)         awUser
-        );
-            Axi4WrAddr#(idWidth, addrWidth, usrWidth) wrAddr = Axi4WrAddr {
-                awId:    awId,
-                awAddr:  awAddr,
-                awLen:   awLen,
-                awSize:  awSize,
-                awBurst: awBurst,
-                awLock:  awLock,
-                awCache: awCache,
-                awProt:  awProt,
-                awQos:   awQos,
-                awUser:  awUser
-            };
-            axiWrAddrConvert.rawBus.validData(awValid, wrAddr);
-        endmethod
-        method Bool awReady = axiWrAddrConvert.rawBus.ready;
+            method Action rValidData(
+                Bool                               rValid,
+                Bit#(idWidth)                      rId,
+                Bit#(TMul#(strbWidth, BYTE_WIDTH)) rData,
+                Bit#(AXI4_RESP_WIDTH)              rResp,
+                Bool                               rLast,
+                Bit#(usrWidth)                     rUser
+            );
+                Axi4RdData#(idWidth, strbWidth, usrWidth) rdData = Axi4RdData {
+                    rId: rId,
+                    rData: rData,
+                    rResp: rResp,
+                    rLast: rLast,
+                    rUser: rUser
+                };
+                rawRdData.validData(rValid, rdData);
+            endmethod
+            method Bool rReady = rawRdData.ready;
+        endinterface
+    );
+endfunction
 
-        // Wr Data channel
-        method Action wValidData(
-            Bool                               wValid,
-            Bit#(idWidth)                      wId,
-            Bit#(TMul#(strbWidth, BYTE_WIDTH)) wData,
-            Bit#(strbWidth)                    wStrb,
-            Bool                               wLast,
-            Bit#(usrWidth)                     wUser
-        );
-            Axi4WrData#(idWidth, strbWidth, usrWidth) wrData = Axi4WrData {
-                wId:   wId,
-                wData: wData,
-                wStrb: wStrb,
-                wLast: wLast,
-                wUser: wUser
-            };
-            axiWrDataConvert.rawBus.validData(wValid, wrData);
-        endmethod
-        method Bool wReady = axiWrDataConvert.rawBus.ready;
 
-        // Wr Response channel
-        method Bool                  bValid = rawAxiWrResp.valid;
-        method Bit#(idWidth)         bId    = rawAxiWrResp.data.bId;
-        method Bit#(AXI4_RESP_WIDTH) bResp  = rawAxiWrResp.data.bResp;
-        method Bit#(usrWidth)        bUser  = rawAxiWrResp.data.bUser;
-        method Action bReady(Bool rdy);
-            rawAxiWrResp.ready(rdy);
-        endmethod
+function RawAxi4WrSlave#(idWidth, addrWidth, strbWidth, usrWidth) parseRawBusToRawAxi4WrSlave(
+    RawBusSlave#(Axi4WrAddr#(idWidth, addrWidth, usrWidth)) rawWrAddr,
+    RawBusSlave#(Axi4WrData#(idWidth, strbWidth, usrWidth)) rawWrData,
+    RawBusMaster#(Axi4WrResp#(idWidth, usrWidth)) rawWrResp
+);
+    return (
+        interface RawAxi4WrSlave;
+            // Wr Addr channel
+            method Action awValidData(
+                Bool                   awValid,
+                Bit#(idWidth)          awId,
+                Bit#(addrWidth)        awAddr,
+                Bit#(AXI4_LEN_WIDTH)   awLen,
+                Bit#(AXI4_SIZE_WIDTH)  awSize,
+                Bit#(AXI4_BURST_WIDTH) awBurst,
+                Bit#(AXI4_LOCK_WIDTH)  awLock,
+                Bit#(AXI4_CACHE_WIDTH) awCache,
+                Bit#(AXI4_PROT_WIDTH)  awProt,
+                Bit#(AXI4_QOS_WIDTH)   awQos,
+                Bit#(usrWidth)         awUser
+            );
+                Axi4WrAddr#(idWidth, addrWidth, usrWidth) wrAddr = Axi4WrAddr {
+                    awId:    awId,
+                    awAddr:  awAddr,
+                    awLen:   awLen,
+                    awSize:  awSize,
+                    awBurst: awBurst,
+                    awLock:  awLock,
+                    awCache: awCache,
+                    awProt:  awProt,
+                    awQos:   awQos,
+                    awUser:  awUser
+                };
+                rawWrAddr.validData(awValid, wrAddr);
+            endmethod
+            method Bool awReady = rawWrAddr.ready;
 
-        // Rd Addr channel
-        method Action arValidData(
-            Bool                   arValid,
-            Bit#(idWidth)          arId,
-            Bit#(addrWidth)        arAddr,
-            Bit#(AXI4_LEN_WIDTH)   arLen,
-            Bit#(AXI4_SIZE_WIDTH)  arSize,
-            Bit#(AXI4_BURST_WIDTH) arBurst,
-            Bit#(AXI4_LOCK_WIDTH)  arLock,
-            Bit#(AXI4_CACHE_WIDTH) arCache,
-            Bit#(AXI4_PROT_WIDTH)  arProt,
-            Bit#(AXI4_QOS_WIDTH)   arQos,
-            Bit#(usrWidth)         arUser
-        );
-            Axi4RdAddr#(idWidth, addrWidth, usrWidth) rdAddr = Axi4RdAddr {
-                arId   : arId,
-                arAddr : arAddr,
-                arLen  : arLen,
-                arSize : arSize,
-                arBurst: arBurst,
-                arLock : arLock,
-                arCache: arCache,
-                arProt : arProt,
-                arQos  : arQos,
-                arUser : arUser
-            };
-            axiRdAddrConvert.rawBus.validData(arValid, rdAddr);
-        endmethod
-        method Bool arReady = axiRdAddrConvert.rawBus.ready;
+            // Wr Data channel
+            method Action wValidData(
+                Bool                               wValid,
+                Bit#(idWidth)                      wId,
+                Bit#(TMul#(strbWidth, BYTE_WIDTH)) wData,
+                Bit#(strbWidth)                    wStrb,
+                Bool                               wLast,
+                Bit#(usrWidth)                     wUser
+            );
+                Axi4WrData#(idWidth, strbWidth, usrWidth) wrData = Axi4WrData {
+                    wId:   wId,
+                    wData: wData,
+                    wStrb: wStrb,
+                    wLast: wLast,
+                    wUser: wUser
+                };
+                rawWrData.validData(wValid, wrData);
+            endmethod
+            method Bool wReady = rawWrData.ready;
 
-        // Rd Data channel
-        method Bool                               rValid = rawAxiRdData.valid;
-        method Bit#(idWidth)                      rId    = rawAxiRdData.data.rId;
-        method Bit#(TMul#(strbWidth, BYTE_WIDTH)) rData  = rawAxiRdData.data.rData;
-        method Bit#(AXI4_RESP_WIDTH)              rResp  = rawAxiRdData.data.rResp;
-        method Bool                               rLast  = rawAxiRdData.data.rLast;
-        method Bit#(usrWidth)                     rUser  = rawAxiRdData.data.rUser;
-        method Action rReady(Bool rdy);
-            rawAxiRdData.ready(rdy);
-        endmethod
-    endinterface;
+            // Wr Response channel
+            method Bool                  bValid = rawWrResp.valid;
+            method Bit#(idWidth)         bId    = rawWrResp.data.bId;
+            method Bit#(AXI4_RESP_WIDTH) bResp  = rawWrResp.data.bResp;
+            method Bit#(usrWidth)        bUser  = rawWrResp.data.bUser;
+            method Action bReady(Bool rdy);
+                rawWrResp.ready(rdy);
+            endmethod
+        endinterface
+    );
+endfunction
+
+function RawAxi4RdSlave#(idWidth, addrWidth, strbWidth, usrWidth) parseRawBusToRawAxi4RdSlave(
+    RawBusSlave#(Axi4RdAddr#(idWidth, addrWidth, usrWidth)) rawRdAddr,
+    RawBusMaster#(Axi4RdData#(idWidth, strbWidth, usrWidth)) rawRdData
+);
+    return (
+        interface RawAxi4RdSlave;
+            // Rd Addr channel
+            method Action arValidData(
+                Bool                   arValid,
+                Bit#(idWidth)          arId,
+                Bit#(addrWidth)        arAddr,
+                Bit#(AXI4_LEN_WIDTH)   arLen,
+                Bit#(AXI4_SIZE_WIDTH)  arSize,
+                Bit#(AXI4_BURST_WIDTH) arBurst,
+                Bit#(AXI4_LOCK_WIDTH)  arLock,
+                Bit#(AXI4_CACHE_WIDTH) arCache,
+                Bit#(AXI4_PROT_WIDTH)  arProt,
+                Bit#(AXI4_QOS_WIDTH)   arQos,
+                Bit#(usrWidth)         arUser
+            );
+                Axi4RdAddr#(idWidth, addrWidth, usrWidth) rdAddr = Axi4RdAddr {
+                    arId   : arId,
+                    arAddr : arAddr,
+                    arLen  : arLen,
+                    arSize : arSize,
+                    arBurst: arBurst,
+                    arLock : arLock,
+                    arCache: arCache,
+                    arProt : arProt,
+                    arQos  : arQos,
+                    arUser : arUser
+                };
+                rawRdAddr.validData(arValid, rdAddr);
+            endmethod
+            method Bool arReady = rawRdAddr.ready;
+
+            // Rd Data channel
+            method Bool                               rValid = rawRdData.valid;
+            method Bit#(idWidth)                      rId    = rawRdData.data.rId;
+            method Bit#(TMul#(strbWidth, BYTE_WIDTH)) rData  = rawRdData.data.rData;
+            method Bit#(AXI4_RESP_WIDTH)              rResp  = rawRdData.data.rResp;
+            method Bool                               rLast  = rawRdData.data.rLast;
+            method Bit#(usrWidth)                     rUser  = rawRdData.data.rUser;
+            method Action rReady(Bool rdy);
+                rawRdData.ready(rdy);
+            endmethod
+        endinterface
+    );
+endfunction
+
+module mkPipeToRawAxi4Master#(
+    PipeOut#(Axi4WrAddr#(idWidth, addrWidth, usrWidth)) wrAddr,
+    PipeOut#(Axi4WrData#(idWidth, strbWidth, usrWidth)) wrData,
+    PipeIn#(Axi4WrResp#(idWidth, usrWidth)) wrResp,
+
+    PipeOut#(Axi4RdAddr#(idWidth, addrWidth, usrWidth)) rdAddr,
+    PipeIn#(Axi4RdData#(idWidth, strbWidth, usrWidth)) rdData
+)(RawAxi4Master#(idWidth, addrWidth, strbWidth, usrWidth));
+    let rawWrAddr <- mkPipeOutToRawBusMaster(wrAddr);
+    let rawWrData <- mkPipeOutToRawBusMaster(wrData);
+    let rawWrResp <- mkPipeInToRawBusSlave(wrResp);
+
+    let rawRdAddr <- mkPipeOutToRawBusMaster(rdAddr);
+    let rawRdData <- mkPipeInToRawBusSlave(rdData);
+
+    interface wrMaster = parseRawBusToRawAxi4WrMaster(rawWrAddr, rawWrData, rawWrResp);
+    interface rdMaster = parseRawBusToRawAxi4RdMaster(rawRdAddr, rawRdData);
 endmodule
+
+module mkPipeToRawAxi4Slave#(
+    PipeIn#(Axi4WrAddr#(idWidth, addrWidth, usrWidth)) wrAddr,
+    PipeIn#(Axi4WrData#(idWidth, strbWidth, usrWidth)) wrData,
+    PipeOut#(Axi4WrResp#(idWidth, usrWidth)) wrResp,
+
+    PipeIn#(Axi4RdAddr#(idWidth, addrWidth, usrWidth)) rdAddr,
+    PipeOut#(Axi4RdData#(idWidth, strbWidth, usrWidth)) rdData
+)(RawAxi4Slave#(idWidth, addrWidth, strbWidth, usrWidth));
+    let rawWrAddr <- mkPipeInToRawBusSlave(wrAddr);
+    let rawWrData <- mkPipeInToRawBusSlave(wrData);
+    let rawWrResp <- mkPipeOutToRawBusMaster(wrResp);
+
+    let rawRdAddr <- mkPipeInToRawBusSlave(rdAddr);
+    let rawRdData <- mkPipeOutToRawBusMaster(rdData);
+
+    interface wrSlave = parseRawBusToRawAxi4WrSlave(rawWrAddr, rawWrData, rawWrResp);
+    interface rdSlave = parseRawBusToRawAxi4RdSlave(rawRdAddr, rawRdData);
+endmodule
+

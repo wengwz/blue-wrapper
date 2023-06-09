@@ -1,96 +1,120 @@
 import FIFOF :: *;
-import PAClib :: *;
 import Connectable :: *;
 import GetPut :: *;
 
+import BusConversion :: *;
+import SemiFifo :: *;
 import AxiStreamTypes :: *;
-import Axi4Types :: *;
 import Axi4LiteTypes :: *;
+import Axi4Types :: *;
 
+typedef 32 TEST_ADDR_WIDTH;
+typedef 16 TEST_KEEP_WIDTH;
+typedef TEST_KEEP_WIDTH TEST_STRB_WIDTH;
+typedef 1 TEST_USER_WIDTH;
+typedef 4 TEST_FIFO_DEPTH;
+typedef 8 TEST_ID_WIDTH;
 
-interface AxiStreamFifo#(numeric type keepWidth, numeric type usrWidth);
-    (* prefix = "s" *) interface RawAxiStreamSlave#(keepWidth, usrWidth) fifoIn;
-    (* prefix = "m" *) interface RawAxiStreamMaster#(keepWidth, usrWidth) fifoOut;
+interface AxiStreamTestFifo#(numeric type keepWidth, numeric type usrWidth);
+    (* prefix = "s_axis" *) interface RawAxiStreamSlave#(keepWidth, usrWidth) fifoIn;
+    (* prefix = "m_axis" *) interface RawAxiStreamMaster#(keepWidth, usrWidth) fifoOut;
 endinterface
 
-module mkAxiStreamFifo#(Integer depth)(AxiStreamFifo#(keepWidth, usrWidth));
-    FIFOF#(AxiStream#(keepWidth, usrWidth)) fifo <- mkSizedFIFOF(depth);
+(* synthesize *)
+module mkAxiStreamTestFifo1(AxiStreamTestFifo#(TEST_KEEP_WIDTH, TEST_USER_WIDTH));
+    Integer fifoDepth = valueOf(TEST_FIFO_DEPTH);
 
-    RawAxiStreamSlaveToPipeOut#(keepWidth, usrWidth) axisSlaveConvert <- mkRawAxiStreamSlaveToPipeOut;
-    let fifoPipeOut <- mkFIFOF_to_Pipe(fifo, axisSlaveConvert.pipeOut);
-    RawAxiStreamMaster#(keepWidth, usrWidth) axiStreamMaster <- mkPipeOutToRawAxiStreamMaster(fifoPipeOut);
+    FIFOF#(AxiStream#(TEST_KEEP_WIDTH, TEST_USER_WIDTH)) fifo <- mkSizedFIFOF(fifoDepth);
 
-    interface fifoIn = axisSlaveConvert.rawAxiStream;
-    interface fifoOut = axiStreamMaster;
+    let rawAxiSlave <- mkPipeInToRawAxiStreamSlave(convertFifoToPipeIn(fifo));
+    let rawAxiMaster <- mkPipeOutToRawAxiStreamMaster(convertFifoToPipeOut(fifo));
+
+    interface fifoIn = rawAxiSlave;
+    interface fifoOut = rawAxiMaster;
 endmodule
 
 (* synthesize *)
-module mkAxiStreamFifo256(AxiStreamFifo#(32, 1));
-    AxiStreamFifo#(32, 1) ifc <- mkAxiStreamFifo(16);
-    return ifc;
-endmodule
+module mkAxiStreamTestFifo2(AxiStreamTestFifo#(TEST_KEEP_WIDTH, TEST_USER_WIDTH));
+    Integer fifoDepth = valueOf(TEST_FIFO_DEPTH);
+    FIFOF#(AxiStream#(TEST_KEEP_WIDTH, TEST_USER_WIDTH)) fifo <- mkSizedFIFOF(fifoDepth);
 
+    let rawAxiSlave <- mkPutToRawAxiStreamSlave(toPut(fifo), CF);
+    let rawAxiMaster <- mkGetToRawAxiStreamMaster(toGet(fifo), CF);
 
-module mkGetPutAxiStreamFifo(AxiStreamFifo#(keepWidth, usrWidth));
-    FIFOF#(AxiStream#(keepWidth, usrWidth)) fifo <- mkFIFOF;
-    RawAxiStreamSlaveToGet#(keepWidth, usrWidth) slaveConvert <- mkRawAxiStreamSlaveToGet;
-    PutToRawAxiStreamMaster#(keepWidth, usrWidth) masterConvert <- mkPutToRawAxiStreamMaster;
-
-
-    mkConnection(slaveConvert.getOut, toPut(fifo));
-    mkConnection(toGet(fifo), masterConvert.putIn);
-    interface fifoIn = slaveConvert.rawAxiIn;
-    interface fifoOut = masterConvert.rawAxiOut;
+    interface fifoIn = rawAxiSlave;
+    interface fifoOut = rawAxiMaster;
 endmodule
 
 (* synthesize *)
-module mkGetPutAxiStreamFifo256(AxiStreamFifo#(32, 1));
-    AxiStreamFifo#(32, 1) ifc <- mkGetPutAxiStreamFifo;
-    return ifc;
+module mkAxiStreamTestFifo3(AxiStreamTestFifo#(TEST_KEEP_WIDTH, TEST_USER_WIDTH));
+    Integer fifoDepth = valueOf(TEST_FIFO_DEPTH);
+    FIFOF#(AxiStream#(TEST_KEEP_WIDTH, TEST_USER_WIDTH)) fifo <- mkSizedFIFOF(fifoDepth);
+
+    RawAxiStreamMasterToPipeIn#(TEST_KEEP_WIDTH, TEST_USER_WIDTH) masterWrapper <- mkRawAxiStreamMasterToPipeIn;
+    RawAxiStreamSlaveToPipeOut#(TEST_KEEP_WIDTH, TEST_USER_WIDTH) slaveWrapper <- mkRawAxiStreamSlaveToPipeOut;
+
+    mkConnection(slaveWrapper.pipe, fifo);
+    mkConnection(fifo, masterWrapper.pipe);
+
+    interface fifoIn = slaveWrapper.rawAxi;
+    interface fifoOut = masterWrapper.rawAxi;
 endmodule
 
-interface Axi4LiteFifo#(numeric type addrWidth, numeric type strbWidth);
-    (* prefix = "s_axi" *) interface RawAxi4LiteSlave#(addrWidth, strbWidth) fifoIn;
-    (* prefix = "m_axi" *) interface RawAxi4LiteMaster#(addrWidth, strbWidth) fifoOut;
+(* synthesize *)
+module mkAxiStreamTestFifo4(AxiStreamTestFifo#(TEST_KEEP_WIDTH, TEST_USER_WIDTH));
+    Integer fifoDepth = valueOf(TEST_FIFO_DEPTH);
+    FIFOF#(AxiStream#(TEST_KEEP_WIDTH, TEST_USER_WIDTH)) fifo <- mkSizedFIFOF(fifoDepth);
+
+    RawAxiStreamMasterToPut#(TEST_KEEP_WIDTH, TEST_USER_WIDTH) masterWrapper <- mkRawAxiStreamMasterToPut;
+    RawAxiStreamSlaveToGet#(TEST_KEEP_WIDTH, TEST_USER_WIDTH) slaveWrapper <- mkRawAxiStreamSlaveToGet;
+
+    mkConnection(slaveWrapper.get, toPut(fifo));
+    mkConnection(toGet(fifo), masterWrapper.put);
+
+    interface fifoIn = slaveWrapper.rawAxi;
+    interface fifoOut = masterWrapper.rawAxi;
+endmodule
+
+
+interface Axi4LiteTestFifo;
+    (* prefix = "s_axi" *) 
+    interface RawAxi4LiteSlave#(TEST_ADDR_WIDTH, TEST_STRB_WIDTH) fifoIn;
+    (* prefix = "m_axi" *) 
+    interface RawAxi4LiteMaster#(TEST_ADDR_WIDTH, TEST_STRB_WIDTH) fifoOut;
 endinterface
 
-module mkAxi4LiteFifo(Axi4LiteFifo#(addrWidth, strbWidth));
-    FIFOF#(Axi4LiteWrAddr#(addrWidth)) wrAddrFifo <- mkFIFOF;
-    FIFOF#(Axi4LiteWrData#(strbWidth)) wrDataFifo <- mkFIFOF;
+(* synthesize *)
+module mkAxi4LiteTestFifo(Axi4LiteTestFifo);
+    FIFOF#(Axi4LiteWrAddr#(TEST_ADDR_WIDTH)) wrAddrFifo <- mkFIFOF;
+    FIFOF#(Axi4LiteWrData#(TEST_STRB_WIDTH)) wrDataFifo <- mkFIFOF;
     FIFOF#(Axi4LiteWrResp) wrRespFifo <- mkFIFOF;
-    FIFOF#(Axi4LiteRdAddr#(addrWidth)) rdAddrFifo <- mkFIFOF;
-    FIFOF#(Axi4LiteRdData#(strbWidth)) rdDataFifo <- mkFIFOF;
+    FIFOF#(Axi4LiteRdAddr#(TEST_ADDR_WIDTH)) rdAddrFifo <- mkFIFOF;
+    FIFOF#(Axi4LiteRdData#(TEST_STRB_WIDTH)) rdDataFifo <- mkFIFOF;
 
-    PipeOut#(Axi4LiteWrResp) wrRespPipe = f_FIFOF_to_PipeOut(wrRespFifo);
-    PipeOut#(Axi4LiteRdData#(strbWidth)) rdDataPipe = f_FIFOF_to_PipeOut(rdDataFifo);
-    RawAxi4LiteSlaveToPipeOut#(addrWidth, strbWidth) slaveConvert <- mkRawAxi4LiteSlaveToPipeOut(wrRespPipe, rdDataPipe);
-    
-    // Write Addr Channel
-    let wrAddrPipe <- mkFIFOF_to_Pipe(wrAddrFifo, slaveConvert.axiWrAddr);
-    // Write Data Channel
-    let wrDataPipe <- mkFIFOF_to_Pipe(wrDataFifo, slaveConvert.axiWrData);
-    // Read Addr Channel
-    let rdAddrPipe <- mkFIFOF_to_Pipe(rdAddrFifo, slaveConvert.axiRdAddr);
+    let rawAxiSlave <- mkPipeToRawAxi4LiteSlave(
+        convertFifoToPipeIn(wrAddrFifo),
+        convertFifoToPipeIn(wrDataFifo),
+        convertFifoToPipeOut(wrRespFifo),
 
-    PipeOutToRawAxi4LiteMaster#(addrWidth, strbWidth) masterConvert <- mkPipeOutToRawAxi4LiteMaster(wrAddrPipe, wrDataPipe, rdAddrPipe);
-    
-    // Write Resp Channel
-    let wrRespTemp <- mkFIFOF_to_Pipe(wrRespFifo, masterConvert.axiWrResp);
-    // Read Data Channel
-    let rdDataTemp <- mkFIFOF_to_Pipe(rdDataFifo, masterConvert.axiRdData);
+        convertFifoToPipeIn(rdAddrFifo),
+        convertFifoToPipeOut(rdDataFifo)
+    );
 
-    interface fifoIn = slaveConvert.rawAxiSlave;
-    interface fifoOut = masterConvert.rawAxiMaster;
-endmodule
+    let rawAxiMaster <- mkPipeToRawAxi4LiteMaster(
+        convertFifoToPipeOut(wrAddrFifo),
+        convertFifoToPipeOut(wrDataFifo),
+        convertFifoToPipeIn(wrRespFifo),
 
-(* synthesize *)
-module mkAxi4LiteFifo256(Axi4LiteFifo#(32, 32));
-    Axi4LiteFifo#(32, 32) ifc <- mkAxi4LiteFifo;
-    return ifc;
+        convertFifoToPipeOut(rdAddrFifo),
+        convertFifoToPipeIn(rdDataFifo)
+    );
+
+    interface fifoIn = rawAxiSlave;
+    interface fifoOut = rawAxiMaster;
 endmodule
 
 
-interface Axi4Fifo#(
+interface Axi4TestFifo#(
     numeric type idWidth,
     numeric type addrWidth,
     numeric type strbWidth,
@@ -100,38 +124,35 @@ interface Axi4Fifo#(
     (* prefix = "m_axi" *) interface RawAxi4Master#(idWidth, addrWidth, strbWidth, usrWidth) fifoOut;
 endinterface
 
-module mkAxi4Fifo(Axi4Fifo#(idWidth, addrWidth, strbWidth, usrWidth));
-    FIFOF#(Axi4WrAddr#(idWidth, addrWidth, usrWidth)) wrAddrFifo <- mkFIFOF;
-    FIFOF#(Axi4WrData#(idWidth, strbWidth, usrWidth)) wrDataFifo <- mkFIFOF;
-    FIFOF#(Axi4WrResp#(idWidth, usrWidth)) wrRespFifo <- mkFIFOF;
-    FIFOF#(Axi4RdAddr#(idWidth, addrWidth, usrWidth)) rdAddrFifo <- mkFIFOF;
-    FIFOF#(Axi4RdData#(idWidth, strbWidth, usrWidth)) rdDataFifo <- mkFIFOF;
-
-    PipeOut#(Axi4WrResp#(idWidth, usrWidth)) wrRespPipe = f_FIFOF_to_PipeOut(wrRespFifo);
-    PipeOut#(Axi4RdData#(idWidth, strbWidth, usrWidth)) rdDataPipe = f_FIFOF_to_PipeOut(rdDataFifo);
-    RawAxi4SlaveToPipeOut#(idWidth, addrWidth, strbWidth, usrWidth) slaveConvert <- mkRawAxi4SlaveToPipeOut(wrRespPipe, rdDataPipe);
-    
-    // Write Addr Channel
-    let wrAddrPipe <- mkFIFOF_to_Pipe(wrAddrFifo, slaveConvert.axiWrAddr);
-    // Write Data Channel
-    let wrDataPipe <- mkFIFOF_to_Pipe(wrDataFifo, slaveConvert.axiWrData);
-    // Read Addr Channel
-    let rdAddrPipe <- mkFIFOF_to_Pipe(rdAddrFifo, slaveConvert.axiRdAddr);
-
-    PipeOutToRawAxi4Master#(idWidth, addrWidth, strbWidth, usrWidth) masterConvert <- mkPipeOutToRawAxi4Master(wrAddrPipe, wrDataPipe, rdAddrPipe);
-    
-    // Write Resp Channel
-    let wrRespTemp <- mkFIFOF_to_Pipe(wrRespFifo, masterConvert.axiWrResp);
-    // Read Data Channel
-    let rdDataTemp <- mkFIFOF_to_Pipe(rdDataFifo, masterConvert.axiRdData);
-
-    interface fifoIn = slaveConvert.rawAxiSlave;
-    interface fifoOut = masterConvert.rawAxiMaster;
-endmodule
-
 (* synthesize *)
-module mkAxi4Fifo256(Axi4Fifo#(7, 32, 32, 5));
-    Axi4Fifo#(7, 32, 32, 5) ifc <- mkAxi4Fifo;
-    return ifc;
+module mkAxi4TestFifo(Axi4TestFifo#(TEST_ID_WIDTH, TEST_ADDR_WIDTH, TEST_STRB_WIDTH, TEST_USER_WIDTH));
+    FIFOF#(Axi4WrAddr#(TEST_ID_WIDTH, TEST_ADDR_WIDTH, TEST_USER_WIDTH)) wrAddrFifo <- mkFIFOF;
+    FIFOF#(Axi4WrData#(TEST_ID_WIDTH, TEST_STRB_WIDTH, TEST_USER_WIDTH)) wrDataFifo <- mkFIFOF;
+    FIFOF#(Axi4WrResp#(TEST_ID_WIDTH, TEST_USER_WIDTH)) wrRespFifo <- mkFIFOF;
+    FIFOF#(Axi4RdAddr#(TEST_ID_WIDTH, TEST_ADDR_WIDTH, TEST_USER_WIDTH)) rdAddrFifo <- mkFIFOF;
+    FIFOF#(Axi4RdData#(TEST_ID_WIDTH, TEST_STRB_WIDTH, TEST_USER_WIDTH)) rdDataFifo <- mkFIFOF;
+
+
+    let rawAxi4Slave <- mkPipeToRawAxi4Slave(
+        convertFifoToPipeIn(wrAddrFifo),
+        convertFifoToPipeIn(wrDataFifo),
+        convertFifoToPipeOut(wrRespFifo),
+
+        convertFifoToPipeIn(rdAddrFifo),
+        convertFifoToPipeOut(rdDataFifo)
+    );
+
+    let rawAxi4Master <- mkPipeToRawAxi4Master(
+        convertFifoToPipeOut(wrAddrFifo),
+        convertFifoToPipeOut(wrDataFifo),
+        convertFifoToPipeIn(wrRespFifo),
+
+        convertFifoToPipeOut(rdAddrFifo),
+        convertFifoToPipeIn(rdDataFifo)
+    );
+
+    interface fifoIn = rawAxi4Slave;
+    interface fifoOut = rawAxi4Master;
 endmodule
+
 

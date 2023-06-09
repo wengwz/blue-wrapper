@@ -4,7 +4,7 @@ SRCDIR = ../src
 VLOGDIR = generated
 LIST_VLOG = ../scripts/listVlogFiles.tcl
 
-TOP = mkGetPutAxiStreamFifo256
+TOP ?= mkAxi4TestFifo
 FILE = AxiTestFifo.bsv
 
 
@@ -40,8 +40,15 @@ verilog:
 	mkdir -p $(VLOGDIR)
 	bluetcl $(LIST_VLOG) -bdir $(BUILDDIR) -vdir $(BUILDDIR) $(TOP) $(TOP) | grep -i '\.v' | xargs -I {} cp {} $(VLOGDIR)
 
+test1: verilog
+	python3 AxiStreamFifoTester.py $(TOP)
+
+test2: verilog
+	python3 AxiDeadLockTester.py $(TOP)
+
 clean:
 	rm -rf $(BUILDDIR) $(VLOGDIR) __pycache__ *.vcd
+
 
 .PHONY: compile link clean
 .DEFAULT_GOAL := verilog

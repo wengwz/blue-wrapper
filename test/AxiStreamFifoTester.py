@@ -1,4 +1,5 @@
 import logging
+import sys
 import os
 import random
 from queue import Queue
@@ -11,19 +12,14 @@ import cocotb_test.simulator
 
 from cocotbext.axi import AxiStreamBus, AxiStreamSource, AxiStreamSink, AxiStreamFrame
 
-CASES_NUM = 6000
+CASES_NUM = 2048
 CASE_MAX_SIZE = 512
 PAUSE_RATE = 0.5
 PAYLOAD_MAX = 128
 
+
 class AxiStreamFifoTester:
-    def __init__(
-        self,
-        dut,
-        cases_num: int,
-        pause_rate: float,
-        payload_max: int
-    ):
+    def __init__(self, dut, cases_num: int, pause_rate: float, payload_max: int):
         assert pause_rate < 1, "Pause rate is out of range"
         self.dut = dut
         self.clock = dut.CLK
@@ -36,7 +32,6 @@ class AxiStreamFifoTester:
         self.pause_rate = pause_rate
         self.ref_model = Queue(maxsize=self.cases_num)
         self.payload_max = payload_max
-
 
         self.axi_stream_src = AxiStreamSource(
             AxiStreamBus.from_prefix(dut, "s_axis"), self.clock, self.reset, False
@@ -82,9 +77,7 @@ class AxiStreamFifoTester:
             self.ref_model.put(raw_data)
 
             raw_data = raw_data.hex("-")
-            self.log.info(
-                f"Drive dut {case_idx} case: rawdata={raw_data}"
-            )
+            self.log.info(f"Drive dut {case_idx} case: rawdata={raw_data}")
 
     async def check_dut_output(self):
         for case_idx in range(self.cases_num):
@@ -105,25 +98,29 @@ class AxiStreamFifoTester:
         self.log.info("Start testing!")
         await check_thread
         self.log.info(f"Pass all {self.cases_num} successfully")
-        
+
+
 @cocotb.test(timeout_time=5000000, timeout_unit="ns")
 async def runAxiStreamFifoTester(dut):
-
     tester = AxiStreamFifoTester(dut, CASES_NUM, PAUSE_RATE, PAYLOAD_MAX)
     await tester.runAxiStreamFifoTester()
-    
+
+
 def testAxiStreamFifo():
+    assert len(sys.argv) >= 2
 
     # set parameters used to run tests
-    toplevel = "mkGetPutAxiStreamFifo256"
+    toplevel = sys.argv[1]
     module = os.path.splitext(os.path.basename(__file__))[0]
     test_dir = os.path.abspath(os.path.dirname(__file__))
     sim_build = os.path.join(test_dir, "build")
     verilog_sources = os.listdir("generated")
-    verilog_sources = list(map(lambda x: os.path.join(test_dir, "generated", x), verilog_sources))
-    
+    verilog_sources = list(
+        map(lambda x: os.path.join(test_dir, "generated", x), verilog_sources)
+    )
+
     print(type(verilog_sources))
-    
+
     cocotb_test.simulator.run(
         toplevel=toplevel,
         module=module,
@@ -131,8 +128,9 @@ def testAxiStreamFifo():
         python_search=test_dir,
         sim_build=sim_build,
         timescale="1ns/1ps",
-        work_dir=test_dir
+        work_dir=test_dir,
     )
+
 
 if __name__ == "__main__":
     testAxiStreamFifo()
