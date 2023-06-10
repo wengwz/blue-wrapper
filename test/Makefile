@@ -36,7 +36,7 @@ SIMEXE = $(BUILDDIR)/out
 
 verilog:
 	mkdir -p $(BUILDDIR)
-	bsc -elab $(VERILOGFLAGS) $(DIRFLAGS) $(MISCFLAGS) $(RECOMPILEFLAGS) $(RUNTIMEFLAGS) $(TRANSFLAGS) -g $(TOP) $(SRCDIR)/$(FILE)
+	bsc -elab $(VERILOGFLAGS) $(DIRFLAGS) $(MISCFLAGS) $(RECOMPILEFLAGS) $(RUNTIMEFLAGS) $(TRANSFLAGS) -g $(TOP) $(FILE)
 	mkdir -p $(VLOGDIR)
 	bluetcl $(LIST_VLOG) -bdir $(BUILDDIR) -vdir $(BUILDDIR) $(TOP) $(TOP) | grep -i '\.v' | xargs -I {} cp {} $(VLOGDIR)
 
