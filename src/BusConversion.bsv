@@ -29,9 +29,6 @@ module mkPipeOutToRawBusMaster#(PipeOut#(dType) pipe)(RawBusMaster#(dType)) prov
 
     rule passWire if (pipe.notEmpty);
         dataW.wset(pipe.first);
-        // if (readyW) begin
-        //     pipe.deq;
-        // end
     endrule
 
     rule passReady if (pipe.notEmpty && readyW);
@@ -43,7 +40,6 @@ module mkPipeOutToRawBusMaster#(PipeOut#(dType) pipe)(RawBusMaster#(dType)) prov
     method Action ready(Bool rdy);
         readyW <= rdy;
     endmethod
-
 endmodule
 
 module mkPipeInToRawBusSlave#(PipeIn#(dType) pipe)(RawBusSlave#(dType)) provisos(Bits#(dType, dSz));
