@@ -4,7 +4,7 @@ SRCDIR = ../src
 VLOGDIR = generated
 LIST_VLOG = ../scripts/listVlogFiles.tcl
 
-TOP ?= mkAxi4TestFifo
+TOP ?= mkAxiStreamTestFifo1
 FILE = AxiTestFifo.bsv
 
 
