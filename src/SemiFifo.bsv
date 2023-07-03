@@ -1,4 +1,5 @@
 import FIFOF :: *;
+import GetPut :: *;
 import Connectable :: *;
 
 
@@ -93,4 +94,40 @@ instance Connectable #(FIFOF#(t), PipeIn#(t));
 	      fo.deq;
       endrule
    endmodule
+endinstance
+
+
+// ================================================================
+// Conversion
+
+// ----------------
+// PipeOut to Get
+
+instance ToGet#(PipeOut#(t), t);
+   function Get#(t) toGet(PipeOut#(t) pipe);
+      return (
+         interface Get;
+            method ActionValue#(t) get();
+               let data = pipe.first;
+               pipe.deq;
+               return data;
+            endmethod
+         endinterface
+      );
+   endfunction
+endinstance
+
+// ----------------
+// PipeIn to Put
+
+instance ToPut#(PipeIn#(t), t);
+   function Put#(t) toPut(PipeIn#(t) pipe);
+      return (
+         interface Put;
+            method Action put(t data);
+               pipe.enq(data);
+            endmethod
+         endinterface
+      );
+   endfunction
 endinstance
