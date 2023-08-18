@@ -1,5 +1,6 @@
 import FIFOF :: *;
 import GetPut :: *;
+import Clocks :: *;
 import Connectable :: *;
 
 
@@ -34,6 +35,38 @@ function PipeOut#(dType) convertFifoToPipeOut(FIFOF#(dType) fifo);
 endfunction
 
 function PipeIn#(dType) convertFifoToPipeIn(FIFOF#(dType) fifo);
+   return (
+      interface PipeIn;
+         method Action enq(dType data);
+            fifo.enq(data);
+         endmethod
+         
+         method Bool notFull();
+            return fifo.notFull;
+         endmethod
+      endinterface
+   );
+endfunction
+
+function PipeOut#(dType) convertSyncFifoToPipeOut(SyncFIFOIfc#(dType) fifo);
+   return (
+      interface PipeOut;
+         method dType first();
+            return fifo.first;
+         endmethod
+               
+         method Action deq();
+            fifo.deq;
+         endmethod
+         
+         method Bool notEmpty();
+            return fifo.notEmpty;
+         endmethod
+      endinterface
+   );
+endfunction
+
+function PipeIn#(dType) convertSyncFifoToPipeIn(SyncFIFOIfc#(dType) fifo);
    return (
       interface PipeIn;
          method Action enq(dType data);
