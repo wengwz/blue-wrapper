@@ -131,3 +131,24 @@ instance ToPut#(PipeIn#(t), t);
       );
    endfunction
 endinstance
+
+
+// ================================================================
+// Utils
+
+module mkDummyPipeIn(PipeIn#(dType)) provisos(Bits#(dType, dSize));
+   method Bool notFull = True;
+   method Action enq(dType data);
+       noAction;
+   endmethod
+endmodule
+
+module mkDummyPipeOut(PipeOut#(dType)) provisos(Bits#(dType, dSize));
+   method Bool notEmpty = False;
+   method dType first if (False);
+       return unpack(0);
+   endmethod
+   method Action deq if (False);
+       noAction;
+   endmethod
+endmodule
