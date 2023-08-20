@@ -64,29 +64,29 @@ module mkAxiStreamExampleWrapper(
 );
 
 mkAxiStreamExample axiStreamExampleInst(
-	.CLK   (    clk),
+    .CLK   (    clk),
     .RST_N (reset_n),
 
     .EN_axiStreamSlave_put (s_axis_tvalid & s_axis_tready),
     .RDY_axiStreamSlave_put (s_axis_tready),
     .axiStreamIn_put (
         {
-			s_axis_tdata,
+            s_axis_tdata,
             s_axis_tkeep,
             s_axis_tuser,
             s_axis_tlast
-		}
+        }
      ),
 
     .EN_axiStreamMaster_get  (m_axis_tvalid & m_axis_tready),
     .RDY_axiStreamMaster_get (m_axis_tvalid),
     .axiStreamMaster_get (
-		{
-			m_axis_tdata,
+	{
+            m_axis_tdata,
             m_axis_tkeep,
             m_axis_tuser,
             m_axis_tlast
-		}
+        }
     )
  );
 endmodule
