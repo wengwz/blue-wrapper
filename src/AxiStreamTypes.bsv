@@ -39,7 +39,7 @@ typedef struct {
     Bit#(keepWidth) tKeep;
     Bool tLast;
     Bit#(usrWidth) tUser;
-} AxiStream#(numeric type keepWidth, numeric type usrWidth) deriving(Bits, FShow);
+} AxiStream#(numeric type keepWidth, numeric type usrWidth) deriving(Bits, FShow, Eq);
 
 (*always_ready, always_enabled*)
 interface RawAxiStreamMaster#(numeric type keepWidth, numeric type usrWidth);
