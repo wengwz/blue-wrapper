@@ -28,17 +28,15 @@ module mkPipeOutToRawBusMaster#(PipeOut#(dType) pipe)(RawBusMaster#(dType)) prov
     RWire#(dType) dataW <- mkRWire;
     Wire#(Bool) readyW <- mkBypassWire;
 
-    let isReset <- isResetAsserted();
-
     rule passWire if (pipe.notEmpty);
         dataW.wset(pipe.first);
     endrule
 
-    rule passReady if (!isReset && pipe.notEmpty && readyW);
+    rule passReady if (pipe.notEmpty && readyW);
         pipe.deq;
     endrule
 
-    method Bool valid = !isReset && pipe.notEmpty;
+    method Bool valid = pipe.notEmpty;
     method dType data = fromMaybe(?, dataW.wget);
     method Action ready(Bool rdy);
         readyW <= rdy;
@@ -49,9 +47,7 @@ module mkPipeInToRawBusSlave#(PipeIn#(dType) pipe)(RawBusSlave#(dType)) provisos
     Wire#(Bool)  validW <- mkBypassWire;
     Wire#(dType) dataW <- mkBypassWire;
 
-    let isReset <- isResetAsserted();
-
-    rule passData if (!isReset && validW);
+    rule passData if (validW);
         pipe.enq(dataW);
     endrule
 
@@ -59,7 +55,7 @@ module mkPipeInToRawBusSlave#(PipeIn#(dType) pipe)(RawBusSlave#(dType)) provisos
         validW <= valid;
         dataW <= data;
     endmethod
-    method Bool ready = !isReset && pipe.notFull;
+    method Bool ready = pipe.notFull;
 endmodule
 
 // Convert Get interface to RawBusMater, a FIFOF is needed to extract rdy from method
