@@ -185,3 +185,19 @@ module mkDummyPipeOut(PipeOut#(dType)) provisos(Bits#(dType, dSize));
        noAction;
    endmethod
 endmodule
+
+module mkPutToPipeIn#(
+    Put#(dType) put
+)(PipeIn#(dType)) provisos(Bits#(dType, dSize));
+    FIFOF#(dType) interBuf <- mkFIFOF;
+    mkConnection(toGet(interBuf), put);
+    return convertFifoToPipeIn(interBuf);
+endmodule
+
+module mkGetToPipeOut#(
+    Get#(dType) get
+)(PipeOut#(dType)) provisos(Bits#(dType, dSize));
+    FIFOF#(dType) interBuf <- mkFIFOF;
+    mkConnection(toPut(interBuf), get);
+    return convertFifoToPipeOut(interBuf);
+endmodule
