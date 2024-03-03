@@ -1,24 +1,25 @@
 import FIFOF :: *;
 import GetPut :: *;
 import Clocks :: *;
+import PAClib :: *;
 import Connectable :: *;
 
 
-interface PipeIn#(type dType);
+interface FifoIn#(type dType);
     method Action enq(dType data);
     method Bool   notFull();
 endinterface
 
-interface PipeOut#(type dType);
+interface FifoOut#(type dType);
     method dType  first();
     method Action deq();
     method Bool   notEmpty();
 endinterface
 
 
-function PipeOut#(dType) convertFifoToPipeOut(FIFOF#(dType) fifo);
+function FifoOut#(dType) convertFifoToFifoOut(FIFOF#(dType) fifo);
    return (
-      interface PipeOut;
+      interface FifoOut;
          method dType first();
             return fifo.first;
          endmethod
@@ -34,9 +35,9 @@ function PipeOut#(dType) convertFifoToPipeOut(FIFOF#(dType) fifo);
    );
 endfunction
 
-function PipeIn#(dType) convertFifoToPipeIn(FIFOF#(dType) fifo);
+function FifoIn#(dType) convertFifoToFifoIn(FIFOF#(dType) fifo);
    return (
-      interface PipeIn;
+      interface FifoIn;
          method Action enq(dType data);
             fifo.enq(data);
          endmethod
@@ -48,9 +49,9 @@ function PipeIn#(dType) convertFifoToPipeIn(FIFOF#(dType) fifo);
    );
 endfunction
 
-function PipeOut#(dType) convertSyncFifoToPipeOut(SyncFIFOIfc#(dType) fifo);
+function FifoOut#(dType) convertSyncFifoToFifoOut(SyncFIFOIfc#(dType) fifo);
    return (
-      interface PipeOut;
+      interface FifoOut;
          method dType first();
             return fifo.first;
          endmethod
@@ -66,9 +67,9 @@ function PipeOut#(dType) convertSyncFifoToPipeOut(SyncFIFOIfc#(dType) fifo);
    );
 endfunction
 
-function PipeIn#(dType) convertSyncFifoToPipeIn(SyncFIFOIfc#(dType) fifo);
+function FifoIn#(dType) convertSyncFifoToFifoIn(SyncFIFOIfc#(dType) fifo);
    return (
-      interface PipeIn;
+      interface FifoIn;
          method Action enq(dType data);
             fifo.enq(data);
          endmethod
@@ -80,15 +81,38 @@ function PipeIn#(dType) convertSyncFifoToPipeIn(SyncFIFOIfc#(dType) fifo);
    );
 endfunction
 
+function FifoOut#(dType) convertPipeOutToFifoOut(PipeOut#(dType) pipe);
+    return (
+        interface FifoOut;
+            method dType first = pipe.first;
+            method Bool notEmpty = pipe.notEmpty;
+            method Action deq;
+                pipe.deq;
+            endmethod
+        endinterface
+    );
+endfunction
+
+function PipeOut#(dType) convertFifoOutToPipeOut(FifoOut#(dType) fifo);
+    return (
+        interface PipeOut;
+            method dType first = fifo.first;
+            method Bool notEmpty = fifo.notEmpty;
+            method Action deq;
+                fifo.deq;
+            endmethod
+        endinterface
+    );
+endfunction
 
 // ================================================================
 // Connections
 
 // ----------------
-// PipeOut to PipeIn
+// FifoOut to FifoIn
 
-instance Connectable#(PipeOut#(t), PipeIn#(t));
-   module mkConnection#(PipeOut#(t) fo, PipeIn#(t) fi)(Empty);
+instance Connectable#(FifoOut#(t), FifoIn#(t));
+   module mkConnection#(FifoOut#(t) fo, FifoIn#(t) fi)(Empty);
       rule connect;
          fi.enq(fo.first);
 	      fo.deq;
@@ -97,19 +121,19 @@ instance Connectable#(PipeOut#(t), PipeIn#(t));
 endinstance
 
 // ----------------
-// PipeIn to PipeOut
+// FifoIn to FifoOut
 
-instance Connectable#(PipeIn#(t), PipeOut#(t));
-   module mkConnection#(PipeIn#(t) fi, PipeOut#(t) fo)(Empty);
+instance Connectable#(FifoIn#(t), FifoOut#(t));
+   module mkConnection#(FifoIn#(t) fi, FifoOut#(t) fo)(Empty);
       mkConnection (fo, fi);
    endmodule
 endinstance
 
 // ----------------
-// PipeOut to FIFOF
+// FifoOut to FIFOF
 
-instance Connectable#(PipeOut#(t), FIFOF#(t));
-   module mkConnection#(PipeOut#(t) fo, FIFOF#(t) fi)(Empty);
+instance Connectable#(FifoOut#(t), FIFOF#(t));
+   module mkConnection#(FifoOut#(t) fo, FIFOF#(t) fi)(Empty);
       rule connect;
 	      fi.enq(fo.first);
 	      fo.deq;
@@ -118,10 +142,10 @@ instance Connectable#(PipeOut#(t), FIFOF#(t));
 endinstance
 
 // ----------------
-// FIFOF to PipeIn
+// FIFOF to FifoIn
 
-instance Connectable #(FIFOF#(t), PipeIn#(t));
-   module mkConnection #(FIFOF#(t) fo, PipeIn#(t) fi)(Empty);
+instance Connectable #(FIFOF#(t), FifoIn#(t));
+   module mkConnection #(FIFOF#(t) fo, FifoIn#(t) fi)(Empty);
       rule connect;
 	      fi.enq(fo.first);
 	      fo.deq;
@@ -134,10 +158,10 @@ endinstance
 // Conversion
 
 // ----------------
-// PipeOut to Get
+// FifoOut to Get
 
-instance ToGet#(PipeOut#(t), t);
-   function Get#(t) toGet(PipeOut#(t) pipe);
+instance ToGet#(FifoOut#(t), t);
+   function Get#(t) toGet(FifoOut#(t) pipe);
       return (
          interface Get;
             method ActionValue#(t) get();
@@ -151,10 +175,10 @@ instance ToGet#(PipeOut#(t), t);
 endinstance
 
 // ----------------
-// PipeIn to Put
+// FifoIn to Put
 
-instance ToPut#(PipeIn#(t), t);
-   function Put#(t) toPut(PipeIn#(t) pipe);
+instance ToPut#(FifoIn#(t), t);
+   function Put#(t) toPut(FifoIn#(t) pipe);
       return (
          interface Put;
             method Action put(t data);
@@ -169,14 +193,14 @@ endinstance
 // ================================================================
 // Utils
 
-module mkDummyPipeIn(PipeIn#(dType)) provisos(Bits#(dType, dSize));
+module mkDummyFifoIn(FifoIn#(dType)) provisos(Bits#(dType, dSize));
    method Bool notFull = True;
    method Action enq(dType data);
        noAction;
    endmethod
 endmodule
 
-module mkDummyPipeOut(PipeOut#(dType)) provisos(Bits#(dType, dSize));
+module mkDummyFifoOut(FifoOut#(dType)) provisos(Bits#(dType, dSize));
    method Bool notEmpty = False;
    method dType first if (False);
        return unpack(0);
@@ -186,18 +210,18 @@ module mkDummyPipeOut(PipeOut#(dType)) provisos(Bits#(dType, dSize));
    endmethod
 endmodule
 
-module mkPutToPipeIn#(
+module mkPutToFifoIn#(
     Put#(dType) put
-)(PipeIn#(dType)) provisos(Bits#(dType, dSize));
+)(FifoIn#(dType)) provisos(Bits#(dType, dSize));
     FIFOF#(dType) interBuf <- mkFIFOF;
     mkConnection(toGet(interBuf), put);
-    return convertFifoToPipeIn(interBuf);
+    return convertFifoToFifoIn(interBuf);
 endmodule
 
-module mkGetToPipeOut#(
+module mkGetToFifoOut#(
     Get#(dType) get
-)(PipeOut#(dType)) provisos(Bits#(dType, dSize));
+)(FifoOut#(dType)) provisos(Bits#(dType, dSize));
     FIFOF#(dType) interBuf <- mkFIFOF;
     mkConnection(toPut(interBuf), get);
-    return convertFifoToPipeOut(interBuf);
+    return convertFifoToFifoOut(interBuf);
 endmodule

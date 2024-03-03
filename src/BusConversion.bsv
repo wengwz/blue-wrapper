@@ -24,7 +24,7 @@ interface RawBusSlave#(type dType);
     (* result = "ready" *) method Bool ready;
 endinterface
 
-module mkPipeOutToRawBusMaster#(PipeOut#(dType) pipe)(RawBusMaster#(dType)) provisos(Bits#(dType, dSz));
+module mkFifoOutToRawBusMaster#(FifoOut#(dType) pipe)(RawBusMaster#(dType)) provisos(Bits#(dType, dSz));
     RWire#(dType) dataW <- mkRWire;
     Wire#(Bool) readyW <- mkBypassWire;
 
@@ -43,7 +43,8 @@ module mkPipeOutToRawBusMaster#(PipeOut#(dType) pipe)(RawBusMaster#(dType)) prov
     endmethod
 endmodule
 
-module mkPipeInToRawBusSlave#(PipeIn#(dType) pipe)(RawBusSlave#(dType)) provisos(Bits#(dType, dSz));
+// Note: the output ready signal is valid during reset
+module mkFifoInToRawBusSlave#(FifoIn#(dType) pipe)(RawBusSlave#(dType)) provisos(Bits#(dType, dSz));
     Wire#(Bool)  validW <- mkBypassWire;
     Wire#(dType) dataW <- mkBypassWire;
 
@@ -72,7 +73,7 @@ module mkGetToRawBusMaster#(Get#(dType) get, FifoType fifoType)(RawBusMaster#(dT
     end
 
     mkConnection(get, toPut(fifo));
-    let rawBus <- mkPipeOutToRawBusMaster(convertFifoToPipeOut(fifo));
+    let rawBus <- mkFifoOutToRawBusMaster(convertFifoToFifoOut(fifo));
     return rawBus;
 endmodule
 
@@ -90,20 +91,20 @@ module mkPutToRawBusSlave#(Put#(dType) put, FifoType fifoType)(RawBusSlave#(dTyp
     end
 
     mkConnection(toGet(fifo), put);
-    let rawBus <- mkPipeInToRawBusSlave(convertFifoToPipeIn(fifo));
+    let rawBus <- mkFifoInToRawBusSlave(convertFifoToFifoIn(fifo));
     return rawBus;
 endmodule
 
 
-// Wrap the RawBusMaster with PipeIn interface
+// Wrap the RawBusMaster with FifoIn interface
 // Note: Axi Protocol permits that the slaver can sets ready only after valid from master rises.
-//       The implementation of RawBusMasterToPipeIn may cause deadlock in this case.
-interface RawBusMasterToPipeIn#(type dType);
+//       The implementation of RawBusMasterToFifoIn may cause deadlock in this case.
+interface RawBusMasterToFifoIn#(type dType);
     interface RawBusMaster#(dType) rawBus;
-    interface PipeIn#(dType) pipe;
+    interface FifoIn#(dType) pipe;
 endinterface
 
-module mkRawBusMasterToPipeIn(RawBusMasterToPipeIn#(dType)) provisos(Bits#(dType, dSz));
+module mkRawBusMasterToFifoIn(RawBusMasterToFifoIn#(dType)) provisos(Bits#(dType, dSz));
     RWire#(dType) validData <- mkRWire;
     Wire#(Bool) readyW <- mkBypassWire;
 
@@ -115,7 +116,7 @@ module mkRawBusMasterToPipeIn(RawBusMasterToPipeIn#(dType)) provisos(Bits#(dType
         endmethod
     endinterface
 
-    interface PipeIn pipe;
+    interface FifoIn pipe;
         method Bool notFull = readyW;
         method Action enq(dType data) if (readyW);
             validData.wset(data);
@@ -123,13 +124,13 @@ module mkRawBusMasterToPipeIn(RawBusMasterToPipeIn#(dType)) provisos(Bits#(dType
     endinterface
 endmodule
 
-// Wrap the RawBusSlave with PipeOut interface
-interface RawBusSlaveToPipeOut#(type dType);
+// Wrap the RawBusSlave with FifoOut interface
+interface RawBusSlaveToFifoOut#(type dType);
     interface RawBusSlave#(dType) rawBus;
-    interface PipeOut#(dType) pipe;
+    interface FifoOut#(dType) pipe;
 endinterface
 
-module mkRawBusSlaveToPipeOut(RawBusSlaveToPipeOut#(dType)) provisos(Bits#(dType, dSz));
+module mkRawBusSlaveToFifoOut(RawBusSlaveToFifoOut#(dType)) provisos(Bits#(dType, dSz));
     Wire#(Bool) validW <- mkBypassWire;
     Wire#(dType) dataW <- mkBypassWire;
     PulseWire readyW <- mkPulseWire;
@@ -143,7 +144,7 @@ module mkRawBusSlaveToPipeOut(RawBusSlaveToPipeOut#(dType)) provisos(Bits#(dType
         endmethod
     endinterface
 
-    interface PipeOut pipe;
+    interface FifoOut pipe;
         method Bool notEmpty = validW;
         method dType first if (validW);
             return dataW;

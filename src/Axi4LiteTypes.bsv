@@ -276,38 +276,38 @@ function RawAxi4LiteRdSlave#(addrWidth, strbWidth) parseRawBusToRawAxi4LiteRdSla
 endfunction
 
 module mkPipeToRawAxi4LiteMaster#(
-    PipeOut#(Axi4LiteWrAddr#(addrWidth)) wrAddr,
-    PipeOut#(Axi4LiteWrData#(strbWidth)) wrData,
-    PipeIn#(Axi4LiteWrResp) wrResp,
+    FifoOut#(Axi4LiteWrAddr#(addrWidth)) wrAddr,
+    FifoOut#(Axi4LiteWrData#(strbWidth)) wrData,
+    FifoIn#(Axi4LiteWrResp) wrResp,
 
-    PipeOut#(Axi4LiteRdAddr#(addrWidth)) rdAddr,
-    PipeIn#(Axi4LiteRdData#(strbWidth)) rdData
+    FifoOut#(Axi4LiteRdAddr#(addrWidth)) rdAddr,
+    FifoIn#(Axi4LiteRdData#(strbWidth)) rdData
 )(RawAxi4LiteMaster#(addrWidth, strbWidth));
-    let rawWrAddrBus <- mkPipeOutToRawBusMaster(wrAddr);
-    let rawWrDataBus <- mkPipeOutToRawBusMaster(wrData);
-    let rawWrRespBus <- mkPipeInToRawBusSlave(wrResp);
+    let rawWrAddrBus <- mkFifoOutToRawBusMaster(wrAddr);
+    let rawWrDataBus <- mkFifoOutToRawBusMaster(wrData);
+    let rawWrRespBus <- mkFifoInToRawBusSlave(wrResp);
 
-    let rawRdAddrBus <- mkPipeOutToRawBusMaster(rdAddr);
-    let rawRdDataBus <- mkPipeInToRawBusSlave(rdData);
+    let rawRdAddrBus <- mkFifoOutToRawBusMaster(rdAddr);
+    let rawRdDataBus <- mkFifoInToRawBusSlave(rdData);
 
     interface wrMaster = parseRawBusToRawAxi4LiteWrMaster(rawWrAddrBus, rawWrDataBus, rawWrRespBus);
     interface rdMaster = parseRawBusToRawAxi4LiteRdMaster(rawRdAddrBus, rawRdDataBus);
 endmodule
 
 module mkPipeToRawAxi4LiteSlave#(
-    PipeIn#(Axi4LiteWrAddr#(addrWidth)) wrAddr,
-    PipeIn#(Axi4LiteWrData#(strbWidth)) wrData,
-    PipeOut#(Axi4LiteWrResp) wrResp,
+    FifoIn#(Axi4LiteWrAddr#(addrWidth)) wrAddr,
+    FifoIn#(Axi4LiteWrData#(strbWidth)) wrData,
+    FifoOut#(Axi4LiteWrResp) wrResp,
 
-    PipeIn#(Axi4LiteRdAddr#(addrWidth)) rdAddr,
-    PipeOut#(Axi4LiteRdData#(strbWidth)) rdData
+    FifoIn#(Axi4LiteRdAddr#(addrWidth)) rdAddr,
+    FifoOut#(Axi4LiteRdData#(strbWidth)) rdData
 )(RawAxi4LiteSlave#(addrWidth, strbWidth));
-    let rawWrAddrBus <- mkPipeInToRawBusSlave(wrAddr);
-    let rawWrDataBus <- mkPipeInToRawBusSlave(wrData);
-    let rawWrRespBus <- mkPipeOutToRawBusMaster(wrResp);
+    let rawWrAddrBus <- mkFifoInToRawBusSlave(wrAddr);
+    let rawWrDataBus <- mkFifoInToRawBusSlave(wrData);
+    let rawWrRespBus <- mkFifoOutToRawBusMaster(wrResp);
 
-    let rawRdAddrBus <- mkPipeInToRawBusSlave(rdAddr);
-    let rawRdDataBus <- mkPipeOutToRawBusMaster(rdData);
+    let rawRdAddrBus <- mkFifoInToRawBusSlave(rdAddr);
+    let rawRdDataBus <- mkFifoOutToRawBusMaster(rdData);
 
     interface wrSlave = parseRawBusToRawAxi4LiteWrSlave(rawWrAddrBus, rawWrDataBus, rawWrRespBus);
     interface rdSlave = parseRawBusToRawAxi4LiteRdSlave(rawRdAddrBus, rawRdDataBus);

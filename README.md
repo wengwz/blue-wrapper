@@ -102,37 +102,37 @@ Although the wrapper module above works, it has some drawbacks which reduce the 
 
 ### Description
 
-The SemiFifo package provides **PipeOut** and **PipeIn** interfaces and some utility functions related with them. The **PipeOut** and **PipeIn** interface are similiar with **Get/Put**, which are designed to output and input data respectively. However, **PipeOut/PipeIn** exposes the implicit **rdy** signal of **deq/enq** through **notEmpty/notFull** to designers, which is inaccessible for **get/put** methods in **Get/Put** interface.
+The SemiFifo package provides **FifoOut** and **FifoIn** interfaces and some utility functions related with them. The **FifoOut** and **FifoIn** interface are similiar with **Get/Put**, which are designed to output and input data respectively. However, **FifoOut/FifoIn** exposes the implicit **rdy** signal of **deq/enq** through **notEmpty/notFull** to designers, which is inaccessible for **get/put** methods in **Get/Put** interface.
 
 ### Interfaces
 
-- **PipeOut** wraps the methods related with **deq** in **FIFOF** interface:
+- **FifoOut** wraps the methods related with **deq** in **FIFOF** interface:
 
 ```bluespec
-interface PipeOut#(type dType);
+interface FifoOut#(type dType);
     method dType  first();
     method Action deq();
     method Bool   notEmpty();
 endinterface
 ```
 
-- **PipeIn** wraps the methods related with **enq** in **FIFOF** interface:
+- **FifoIn** wraps the methods related with **enq** in **FIFOF** interface:
 
 ```bluespec
-interface PipeIn#(type dType);
+interface FifoIn#(type dType);
     method Action enq(dType data);
     method Bool   notFull();
 endinterface
 ```
 
 ### Functions
-SemiFifo package also provides some utility functions and modules related with **PipeIn/PipeOut** interface. Here just lists some frequently used ones and for all other functions you can find them in [src/SemiFifo.bsv](./src/SemiFifo.bsv).
+SemiFifo package also provides some utility functions and modules related with **FifoIn/FifoOut** interface. Here just lists some frequently used ones and for all other functions you can find them in [src/SemiFifo.bsv](./src/SemiFifo.bsv).
 | Name | Input Type | Return Type | Description |
 | --- | --- | --- | --- |
-| convertFifoToPipeOut | FIFOF | PipeOut | extract methods of PipeOut from FIFOF |
-| convertFifoToPipeIn  | FIFOF | PipeOut | extract methods of PipeIn from FIFOF  |
-| toGet | PipeOut | Get | convert PipeOut interface to Get interface |
-| toPut | PipeIn  | Put | convert PipeIn interface to Put interface |
+| convertFifoToFifoOut | FIFOF | FifoOut | extract methods of FifoOut from FIFOF |
+| convertFifoToFifoIn  | FIFOF | FifoOut | extract methods of FifoIn from FIFOF  |
+| toGet | FifoOut | Get | convert FifoOut interface to Get interface |
+| toPut | FifoIn  | Put | convert FifoIn interface to Put interface |
 
 ## BusConversion Package
 
@@ -166,37 +166,37 @@ interface RawBusSlave#(type dType);
 endinterface
 ```
 
-- **RawBusMasterToPipeIn** interface consists of two sub-interfaces, including **RawBusMaster** which generates **valid-ready** based Verilog interface and **PipeIn** interface which wraps **RawBusMaster** so that it can be invoked by other BSV modules to initiate transactions.
+- **RawBusMasterToFifoIn** interface consists of two sub-interfaces, including **RawBusMaster** which generates **valid-ready** based Verilog interface and **FifoIn** interface which wraps **RawBusMaster** so that it can be invoked by other BSV modules to initiate transactions.
 
 ```bluespec
-interface RawBusMasterToPipeIn#(type dType);
+interface RawBusMasterToFifoIn#(type dType);
     interface RawBusMaster#(dType) rawBus;
-    interface PipeIn#(dType) pipe;
+    interface FifoIn#(dType) pipe;
 endinterface
 ```
 
-- **RawBusSlaveToPipeOut** interface consists of two sub-interfaces, including **RawBusSlave** which generates **valid-ready** based Verilog interface and **PipeOut** interface which wraps **RawBusSlave** so that it can be invoked by other BSV modules.
+- **RawBusSlaveToFifoOut** interface consists of two sub-interfaces, including **RawBusSlave** which generates **valid-ready** based Verilog interface and **FifoOut** interface which wraps **RawBusSlave** so that it can be invoked by other BSV modules.
 
 ```bluespec
-interface RawBusSlaveToPipeOut#(type dType);
+interface RawBusSlaveToFifoOut#(type dType);
     interface RawBusSlave#(dType) rawBus;
-    interface PipeOut#(dType) pipe;
+    interface FifoOut#(dType) pipe;
 endinterface
 ```
 
-- **RawBusMasterToPut** interface is similar to **RawBusMasterToPipeIn**, which replaces **PipeIn** with **Put** interface .
-- **RawBusSlaveToGet** interface corresponds to **RawBusMasterToPipeOut** and it replaces **PipeOut** with **Get** interface.
+- **RawBusMasterToPut** interface is similar to **RawBusMasterToFifoIn**, which replaces **FifoIn** with **Put** interface .
+- **RawBusSlaveToGet** interface corresponds to **RawBusMasterToFifoOut** and it replaces **FifoOut** with **Get** interface.
 
 ### Modules
 
 | Name | Input Argument | Returned Interface | Description |
 | --- | --- | --- | --- |
-| mkPipeOutToRawBusMaster | PipeOut pipe | RawBusMaster | convert PipeOut to RawBusMaster |
-| mkPipeInToRawBusSlave | PipeIn pipe | RawBusSlave | convert PipeIn to RawBusSlave |
+| mkFifoOutToRawBusMaster | FifoOut pipe | RawBusMaster | convert FifoOut to RawBusMaster |
+| mkFifoInToRawBusSlave | FifoIn pipe | RawBusSlave | convert FifoIn to RawBusSlave |
 | mkGetToRawBusMaster | Get get <br> FifoType fifoType | RawBusMaster | convert Get to RawBusMaster |
 | mkPutToRawBusSlave | Put put <br> FifoType fifoType | RawBusSlave | convert Put to RawBusSlave |
-| mkRawBusMasterToPipeIn | / | RawBusMasterToPipeIn | wrap RawBusMaster as PipeIn |
-| mkRawBusSlaveToPipeOut | / | RawBusSlaveToPipeOut | wrap RawBusSlave as PipeOut |
+| mkRawBusMasterToFifoIn | / | RawBusMasterToFifoIn | wrap RawBusMaster as FifoIn |
+| mkRawBusSlaveToFifoOut | / | RawBusSlaveToFifoOut | wrap RawBusSlave as FifoOut |
 | mkRawBusMasterToPut | / | RawBusMasterToPut | wrap RawBusMaster as Put |
 | mkRawBusSlaveToGet | / | RawBusSlaveToGet | wrap RawBusSlave as Get |
 
@@ -225,10 +225,10 @@ typedef struct {
 
 - **RawAxiStreamMaster** interface generates the standard AXI-Stream Verilog interface for master.
 - **RawAxiStreamSlave** interface generates the standard AXI-Stream Verilog interface for slave.
-- **RawAxiStreamMasterToPipeIn** interface consists of two sub-interfaces, including **RawAxiStreamMaster** and **PipeIn#(AxiStream)** used to wrap the other one.
-- **RawAxiStreamSlaveToPipeOut** interface consists of two sub-interfaces, including **RawAxiStreamSlave** and **PipeOut#(AxiStream)** used to wrap the other one.
-- **RawAxiStreamMasterToPut** replaces **PipeIn** in **RawAxiStreamMasterToPipeIn** with **Put**.
-- **RawAxiStreamSlaveToGet** replcaes **PipeOut** in **RawAxiStreamSlaveToPipeOut** with **Get**.
+- **RawAxiStreamMasterToFifoIn** interface consists of two sub-interfaces, including **RawAxiStreamMaster** and **FifoIn#(AxiStream)** used to wrap the other one.
+- **RawAxiStreamSlaveToFifoOut** interface consists of two sub-interfaces, including **RawAxiStreamSlave** and **FifoOut#(AxiStream)** used to wrap the other one.
+- **RawAxiStreamMasterToPut** replaces **FifoIn** in **RawAxiStreamMasterToFifoIn** with **Put**.
+- **RawAxiStreamSlaveToGet** replcaes **FifoOut** in **RawAxiStreamSlaveToFifoOut** with **Get**.
 
 All interfaces listed above are configurable with respect to the width of tkeep and tusr signals in AXI-Stream bus.
 ### Functions
@@ -240,12 +240,12 @@ All interfaces listed above are configurable with respect to the width of tkeep 
 
 | Name | Input Argument | Returned Interface | Description |
 | --- | --- | --- | --- |
-| mkPipeOutToRawAxiStreamMaster | PipeOut pipe | RawAxiStreamMaster | convert PipeOut#(AxiStream) to RawAxiStreamMaster |
-| mkPipeInToRawAxiStreamSlave | PipeIn pipe | RawAxiStreamSlave | convert PipeIn#(AxiStream) to RawAxiStreamSlave |
+| mkFifoOutToRawAxiStreamMaster | FifoOut pipe | RawAxiStreamMaster | convert FifoOut#(AxiStream) to RawAxiStreamMaster |
+| mkFifoInToRawAxiStreamSlave | FifoIn pipe | RawAxiStreamSlave | convert FifoIn#(AxiStream) to RawAxiStreamSlave |
 | mkGetToRawAxiStreamMaster | Get get <br> FifoType fifoType | RawAxiStreamMaster | convert Get#(AxiStream) to RawAxiStreamMaster |
 | mkPutToRawAxiStreamSlave | Put put <br> FifoType fifoType | RawAxiStreamSlave | convert Put#(AxiStream) to RawAxiStreamSlave |
-| mkRawAxiStreamMasterToPipeIn | / | RawAxiStreamMasterToPipeIn | wrap RawAxiStreamMaster as PipeIn#(AxiStream) |
-| mkRawAxiStreamSlaveToPipeOut | / | RawAxiStreamSlaveToPipeOut | wrap RawAxiStreamSlave as PipeOut#(AxiStream) |
+| mkRawAxiStreamMasterToFifoIn | / | RawAxiStreamMasterToFifoIn | wrap RawAxiStreamMaster as FifoIn#(AxiStream) |
+| mkRawAxiStreamSlaveToFifoOut | / | RawAxiStreamSlaveToFifoOut | wrap RawAxiStreamSlave as FifoOut#(AxiStream) |
 | mkRawAxiStreamMasterToPut | / | RawAxiStreamMasterToPut | wrap RawAxiStreamMaster as Put#(AxiStream) |
 | mkRawAxiStreamSlaveToGet | / | RawAxiStreamSlaveToGet | wrap RawAxiStreamSlave as Get#(AxiStream) |
 

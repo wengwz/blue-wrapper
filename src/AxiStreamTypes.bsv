@@ -106,19 +106,19 @@ function RawAxiStreamSlave#(keepWidth, usrWidth) convertRawBusToRawAxiStreamSlav
     );
 endfunction
 
-module mkPipeOutToRawAxiStreamMaster#(
-    PipeOut#(AxiStream#(keepWidth, usrWidth)) pipe
+module mkFifoOutToRawAxiStreamMaster#(
+    FifoOut#(AxiStream#(keepWidth, usrWidth)) pipe
     )(RawAxiStreamMaster#(keepWidth, usrWidth));
 
-    let rawBus <- mkPipeOutToRawBusMaster(pipe);
+    let rawBus <- mkFifoOutToRawBusMaster(pipe);
     return convertRawBusToRawAxiStreamMaster(rawBus);
 endmodule
 
-module mkPipeInToRawAxiStreamSlave#(
-    PipeIn#(AxiStream#(keepWidth, usrWidth)) pipe
+module mkFifoInToRawAxiStreamSlave#(
+    FifoIn#(AxiStream#(keepWidth, usrWidth)) pipe
     )(RawAxiStreamSlave#(keepWidth, usrWidth));
 
-    let rawBus <- mkPipeInToRawBusSlave(pipe);
+    let rawBus <- mkFifoInToRawBusSlave(pipe);
     return convertRawBusToRawAxiStreamSlave(rawBus);
 endmodule
 
@@ -139,25 +139,25 @@ module mkPutToRawAxiStreamSlave#(
 endmodule
 
 
-interface RawAxiStreamMasterToPipeIn#(numeric type keepWidth, numeric type usrWidth);
-    interface PipeIn#(AxiStream#(keepWidth, usrWidth)) pipe;
+interface RawAxiStreamMasterToFifoIn#(numeric type keepWidth, numeric type usrWidth);
+    interface FifoIn#(AxiStream#(keepWidth, usrWidth)) pipe;
     interface RawAxiStreamMaster#(keepWidth, usrWidth) rawAxi;
 endinterface
 
-module mkRawAxiStreamMasterToPipeIn(RawAxiStreamMasterToPipeIn#(keepWidth, usrWidth));
-    RawBusMasterToPipeIn#(AxiStream#(keepWidth, usrWidth)) busWrapper <- mkRawBusMasterToPipeIn;
+module mkRawAxiStreamMasterToFifoIn(RawAxiStreamMasterToFifoIn#(keepWidth, usrWidth));
+    RawBusMasterToFifoIn#(AxiStream#(keepWidth, usrWidth)) busWrapper <- mkRawBusMasterToFifoIn;
 
     interface pipe = busWrapper.pipe;
     interface rawAxi= convertRawBusToRawAxiStreamMaster(busWrapper.rawBus);
 endmodule
 
-interface RawAxiStreamSlaveToPipeOut#(numeric type keepWidth, numeric type usrWidth);
-    interface PipeOut#(AxiStream#(keepWidth, usrWidth)) pipe;
+interface RawAxiStreamSlaveToFifoOut#(numeric type keepWidth, numeric type usrWidth);
+    interface FifoOut#(AxiStream#(keepWidth, usrWidth)) pipe;
     interface RawAxiStreamSlave#(keepWidth, usrWidth) rawAxi;
 endinterface
 
-module mkRawAxiStreamSlaveToPipeOut(RawAxiStreamSlaveToPipeOut#(keepWidth, usrWidth));
-    RawBusSlaveToPipeOut#(AxiStream#(keepWidth, usrWidth)) busWrapper <- mkRawBusSlaveToPipeOut;
+module mkRawAxiStreamSlaveToFifoOut(RawAxiStreamSlaveToFifoOut#(keepWidth, usrWidth));
+    RawBusSlaveToFifoOut#(AxiStream#(keepWidth, usrWidth)) busWrapper <- mkRawBusSlaveToFifoOut;
 
     interface pipe = busWrapper.pipe;
     interface rawAxi = convertRawBusToRawAxiStreamSlave(busWrapper.rawBus);
