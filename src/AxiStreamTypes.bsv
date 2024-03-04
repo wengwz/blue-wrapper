@@ -1,5 +1,6 @@
 import FIFOF :: *;
 import GetPut :: *;
+import PAClib :: *;
 
 import BusConversion :: *;
 import SemiFifo :: *;
@@ -112,6 +113,14 @@ module mkFifoOutToRawAxiStreamMaster#(
 
     let rawBus <- mkFifoOutToRawBusMaster(pipe);
     return convertRawBusToRawAxiStreamMaster(rawBus);
+endmodule
+
+module mkPipeOutToRawAxiStreamMaster#(
+    PipeOut#(AxiStream#(keepWidth, usrWidth)) pipe
+    )(RawAxiStreamMaster#(keepWidth, usrWidth));
+
+    let rawAxiStream <- mkFifoOutToRawAxiStreamMaster(convertPipeOutToFifoOut(pipe));
+    return rawAxiStream;
 endmodule
 
 module mkFifoInToRawAxiStreamSlave#(

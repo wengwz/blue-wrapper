@@ -452,7 +452,7 @@ function RawAxi4RdSlave#(idWidth, addrWidth, strbWidth, usrWidth) parseRawBusToR
     );
 endfunction
 
-module mkPipeToRawAxi4Master#(
+module mkRawAxi4Master#(
     FifoOut#(Axi4WrAddr#(idWidth, addrWidth, usrWidth)) wrAddr,
     FifoOut#(Axi4WrData#(idWidth, strbWidth, usrWidth)) wrData,
     FifoIn#(Axi4WrResp#(idWidth, usrWidth)) wrResp,
@@ -471,7 +471,7 @@ module mkPipeToRawAxi4Master#(
     interface rdMaster = parseRawBusToRawAxi4RdMaster(rawRdAddr, rawRdData);
 endmodule
 
-module mkPipeToRawAxi4Slave#(
+module mkRawAxi4Slave#(
     FifoIn#(Axi4WrAddr#(idWidth, addrWidth, usrWidth)) wrAddr,
     FifoIn#(Axi4WrData#(idWidth, strbWidth, usrWidth)) wrData,
     FifoOut#(Axi4WrResp#(idWidth, usrWidth)) wrResp,

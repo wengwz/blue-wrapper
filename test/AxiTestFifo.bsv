@@ -91,7 +91,7 @@ module mkAxi4LiteTestFifo(Axi4LiteTestFifo);
     FIFOF#(Axi4LiteRdAddr#(TEST_ADDR_WIDTH)) rdAddrFifo <- mkFIFOF;
     FIFOF#(Axi4LiteRdData#(TEST_STRB_WIDTH)) rdDataFifo <- mkFIFOF;
 
-    let rawAxiSlave <- mkPipeToRawAxi4LiteSlave(
+    let rawAxiSlave <- mkRawAxi4LiteSlave(
         convertFifoToFifoIn(wrAddrFifo),
         convertFifoToFifoIn(wrDataFifo),
         convertFifoToFifoOut(wrRespFifo),
@@ -100,7 +100,7 @@ module mkAxi4LiteTestFifo(Axi4LiteTestFifo);
         convertFifoToFifoOut(rdDataFifo)
     );
 
-    let rawAxiMaster <- mkPipeToRawAxi4LiteMaster(
+    let rawAxiMaster <- mkRawAxi4LiteMaster(
         convertFifoToFifoOut(wrAddrFifo),
         convertFifoToFifoOut(wrDataFifo),
         convertFifoToFifoIn(wrRespFifo),
@@ -133,7 +133,7 @@ module mkAxi4TestFifo(Axi4TestFifo#(TEST_ID_WIDTH, TEST_ADDR_WIDTH, TEST_STRB_WI
     FIFOF#(Axi4RdData#(TEST_ID_WIDTH, TEST_STRB_WIDTH, TEST_USER_WIDTH)) rdDataFifo <- mkFIFOF;
 
 
-    let rawAxi4Slave <- mkPipeToRawAxi4Slave(
+    let rawAxi4Slave <- mkRawAxi4Slave(
         convertFifoToFifoIn(wrAddrFifo),
         convertFifoToFifoIn(wrDataFifo),
         convertFifoToFifoOut(wrRespFifo),
@@ -142,7 +142,7 @@ module mkAxi4TestFifo(Axi4TestFifo#(TEST_ID_WIDTH, TEST_ADDR_WIDTH, TEST_STRB_WI
         convertFifoToFifoOut(rdDataFifo)
     );
 
-    let rawAxi4Master <- mkPipeToRawAxi4Master(
+    let rawAxi4Master <- mkRawAxi4Master(
         convertFifoToFifoOut(wrAddrFifo),
         convertFifoToFifoOut(wrDataFifo),
         convertFifoToFifoIn(wrRespFifo),
